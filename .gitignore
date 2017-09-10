@@ -1,0 +1,8 @@
+*.autosave
+*.pyc
+*.user
+*.*~
+*/dist/
+src/build/
+src/dist/
+

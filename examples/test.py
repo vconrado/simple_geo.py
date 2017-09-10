@@ -1,21 +1,9 @@
-# Python Client API for BDQ Web Feature Service (WFS)
+#import sys
+#sys.path.append('../src/bdq')
 
-
-
-## Building and installing bdq.py from source
-**1.** In the shell, type
-```bash
-  git clone https://github.com/vconrado/bdq.py.git
-  cd bdq.py/src
-  pip install .
-```
-
-## Using bdq.py
-
-```python
 from bdq import bdq
 
-b = bdq("http://[SERVER_IP]:[PORT]/[GEOSERVER]")
+b = bdq("http://localhost:8080/geoserver-esensing/")
 
 ft_list = b.list_features()
 
@@ -31,4 +19,4 @@ fc = b.feature_collection("esensing:focos_bra_2016",
                           filter=["vegetacao='2'","(satelite='NPP_375'+OR+satelite='TERRA_M-T')"], 
                           max_features=10)
 
-```
+print(fc)
