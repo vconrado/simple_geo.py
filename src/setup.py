@@ -22,7 +22,7 @@
 from setuptools import setup
 
 setup(name='bdq',
-      version='0.0.1',
+      version='0.0.2',
       description='Python Client API for BDQ Web Feature Service',
       url='https://github.com/vconrado/bdq.py',
       author='Vitor Conrado Faria Gomes',

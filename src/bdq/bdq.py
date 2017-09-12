@@ -21,16 +21,14 @@
 
 import json
 from xml.dom import minidom
+import requests
 
 try:
     # For Python 3.0 and later
-    from urllib.request import urlopen, quote
+    from urllib.request import quote
 except ImportError:
     # Fall back to Python 2's urllib2
-    from urllib2 import urlopen, quote
-
-
-
+    from urllib2 import quote
 
 
 class bdq:
@@ -43,7 +41,6 @@ class bdq:
         
     """
 
-
     def __init__(self, host):
         """Create a BDQ WFS client attached to the given host address (an URL).
 
@@ -52,12 +49,18 @@ class bdq:
         """
         self.host = host
         self.base_path = "wfs?service=wfs&version=1.0.0&outputFormat=application/json"
-   
-    def _request(self, uri):
-        #print(uri)
+
+    def _request2(self, uri):
+        # print(uri)
         resource = urlopen(uri)
         doc = resource.read().decode('utf-8')
+
         return doc
+
+    def _request(self, uri):
+        #print(uri)
+        r = requests.get(uri)
+        return r.content
 
     def list_features(self):
         """Returns the list of all available features in service.
@@ -73,15 +76,15 @@ class bdq:
             Exception: if the service returns a expcetion
         """
         doc = self._request("{}/{}&request=GetCapabilities".format(self.host, self.base_path))
-        if 'exception' in doc: 
+        if 'exception' in doc:
             raise Exception(doc["exception"])
-            
+
         xmldoc = minidom.parseString(doc)
         itemlist = xmldoc.getElementsByTagName('FeatureType')
 
-        features= dict()
+        features = dict()
         features[u'features'] = []
-        
+
         for s in itemlist:
             features[u'features'].append(s.childNodes[0].firstChild.nodeValue)
 
@@ -106,22 +109,22 @@ class bdq:
             raise ValueError("Missing feature name.")
 
         doc = self._request("{}/{}&request=DescribeFeatureType&typeName={}".format(self.host, self.base_path, ft_name))
-        if 'exception' in doc: 
+        if 'exception' in doc:
             raise Exception(doc["exception"])
-            
+
         js = json.loads(doc)
 
         feature = dict()
         feature['name'] = js['featureTypes'][0]['typeName']
-        feature['namespace']=js['targetPrefix']
-        feature['full_name']="{}:{}".format(feature['namespace'], feature['name'])
-        
-        feature['attributes']= []
+        feature['namespace'] = js['targetPrefix']
+        feature['full_name'] = "{}:{}".format(feature['namespace'], feature['name'])
+
+        feature['attributes'] = []
         for prop in js['featureTypes'][0]['properties']:
-            feature['attributes'].append({'name': prop['name'],'datatype': prop['localType']})
-        
+            feature['attributes'].append({'name': prop['name'], 'datatype': prop['localType']})
+
         return feature
-        
+
     def feature_collection(self, ft_name, **kwargs):
         """Retrieve the feature collection given feature.
 
@@ -141,27 +144,27 @@ class bdq:
         if not ft_name:
             raise ValueError("Missing feature name.")
 
-        invalid_parameters=set(kwargs) - set(["max_features", "attributes", "within", "filter"]);
+        invalid_parameters = set(kwargs) - set(["max_features", "attributes", "within", "filter"]);
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
-        
-        max_features = ""        
+
+        max_features = ""
         if 'max_features' in kwargs:
             max_features = "&maxFeatures={}".format(kwargs['max_features'])
 
-        attributes = ""        
+        attributes = ""
         if 'attributes' in kwargs:
             if type(kwargs['attributes']) in [list, tuple]:
                 kwargs['attributes'] = ",".join(kwargs['attributes'])
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('attributes must be a list, tuple or string')
-            attributes="&propertyName=geometria,{}".format(kwargs['attributes'])   
+            attributes = "&propertyName=geometria,{}".format(kwargs['attributes'])
 
-        cql_filter=""
+        cql_filter = ""
         if 'within' in kwargs:
             if not type(kwargs['within']) is str:
                 raise AttributeError('within must be a string')
-            cql_filter="&CQL_FILTER=WITHIN(geometria,{})".format(quote(kwargs['within']))
+            cql_filter = "&CQL_FILTER=WITHIN(geometria,{})".format(quote(kwargs['within']))
 
         if 'filter' in kwargs:
             if type(kwargs['filter']) in [list, tuple]:
@@ -169,18 +172,19 @@ class bdq:
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('filter must be a list, tuple or string')
             if not cql_filter:
-                cql_filter="&CQL_FILTER="
+                cql_filter = "&CQL_FILTER="
             else:
-                cql_filter+="+AND+"
-            cql_filter+=kwargs['filter']
-                
-            
-        doc = self._request("{}/{}&request=GetFeature&typeName={}{}{}{}".format(self.host, self.base_path, ft_name, max_features,attributes, cql_filter))
-        if 'exception' in doc: 
+                cql_filter += "+AND+"
+            cql_filter += kwargs['filter']
+
+        doc = self._request(
+            "{}/{}&request=GetFeature&typeName={}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
+                                                                attributes, cql_filter))
+        if 'exception' in doc:
             raise Exception(doc["exception"])
 
         js = json.loads(doc)
-        
+
         fc = dict()
         fc['total_features'] = js['totalFeatures']
         fc['total'] = len(js['features'])
@@ -189,5 +193,5 @@ class bdq:
             feature = {'coordinates': item['geometry']['coordinates']};
             feature.update(item['properties'])
             fc['features'].append(feature)
-            
+
         return fc
