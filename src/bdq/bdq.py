@@ -41,7 +41,7 @@ class bdq:
         
     """
 
-    def __init__(self, host):
+    def __init__(self, host, **kwargs):
         """Create a BDQ WFS client attached to the given host address (an URL).
 
         Args:
@@ -49,16 +49,18 @@ class bdq:
         """
         self.host = host
         self.base_path = "wfs?service=wfs&version=1.0.0&outputFormat=application/json"
+        self.debug = False
 
-    def _request2(self, uri):
-        # print(uri)
-        resource = urlopen(uri)
-        doc = resource.read().decode('utf-8')
-
-        return doc
-
+        invalid_parameters = set(kwargs) - set(["debug"]);
+        if invalid_parameters:
+            raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
+        if 'debug' in kwargs:
+            if not type(kwargs['debug']) is bool:
+                raise AttributeError('debug must be a boolean')
+            self.debug = kwargs['debug']
     def _request(self, uri):
-        #print(uri)
+        if self.debug:
+            print(uri)
         r = requests.get(uri)
         return r.content
 

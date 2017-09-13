@@ -4,7 +4,7 @@ sys.path.append('../src/bdq')
 
 from bdq import bdq
 
-b = bdq("http://localhost:8080/geoserver-esensing/")
+b = bdq("http://localhost:8080/geoserver-esensing/",debug=True)
 
 ft_list = b.list_features()
 
