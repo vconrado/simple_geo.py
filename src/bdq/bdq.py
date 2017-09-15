@@ -46,6 +46,7 @@ class bdq:
 
         Args:
             host (str): the server URL.
+            debug (bool): enable debug mode
         """
         self.host = host
         self.base_path = "wfs?service=wfs&version=1.0.0&outputFormat=application/json"
@@ -58,6 +59,7 @@ class bdq:
             if not type(kwargs['debug']) is bool:
                 raise AttributeError('debug must be a boolean')
             self.debug = kwargs['debug']
+
     def _request(self, uri):
         if self.debug:
             print(uri)
@@ -136,7 +138,8 @@ class bdq:
             max_features (int, optional): the number of records to get
             attributes(list, tuple, str, optional): the list, tuple or string of attributes you are interested in to have the feature collection.
             within(str, optional): a Polygon/MultiPolygon in Well-known text (WKT) format used filter features
-            filter(list, tuple, srt, optional): the list, tuple or string of cql filter (http://docs.geoserver.org/latest/en/user/filter/function_reference.html#filter-function-reference)
+            filter(list, tuple, str, optional): the list, tuple or string of cql filter (http://docs.geoserver.org/latest/en/user/filter/function_reference.html#filter-function-reference)
+            sort_by(list, tuple, str, optional(: the list, tuple or string of attributes used to sort resulting collection
 
         Raises:
             ValueError: if latitude or longitude is out of range or any mandatory parameter is missing.
@@ -146,7 +149,7 @@ class bdq:
         if not ft_name:
             raise ValueError("Missing feature name.")
 
-        invalid_parameters = set(kwargs) - set(["max_features", "attributes", "within", "filter"]);
+        invalid_parameters = set(kwargs) - set(["max_features", "attributes", "within", "filter", "sort_by"]);
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
 
@@ -161,6 +164,14 @@ class bdq:
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('attributes must be a list, tuple or string')
             attributes = "&propertyName=geometria,{}".format(kwargs['attributes'])
+
+        sort_by = ""
+        if 'sort_by' in kwargs:
+            if type(kwargs['sort_by']) in [list, tuple]:
+                kwargs['sort_by'] = ",".join(kwargs['sort_by'])
+            elif not type(kwargs['sort_by']) is str:
+                raise AttributeError('sort_by must be a list, tuple or string')
+            sort_by = "&sortBy={}".format(kwargs['sort_by'])
 
         cql_filter = ""
         if 'within' in kwargs:
@@ -180,8 +191,8 @@ class bdq:
             cql_filter += kwargs['filter']
 
         doc = self._request(
-            "{}/{}&request=GetFeature&typeName={}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
-                                                                attributes, cql_filter))
+            "{}/{}&request=GetFeature&typeName={}{}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
+                                                                attributes, cql_filter,sort_by))
         if 'exception' in doc:
             raise Exception(doc["exception"])
 
