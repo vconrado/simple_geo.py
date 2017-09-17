@@ -22,6 +22,9 @@
 import json
 from xml.dom import minidom
 import requests
+from wfs import wfs
+from wtss import wtss
+import pandas as pd
 
 try:
     # For Python 3.0 and later
@@ -32,179 +35,91 @@ except ImportError:
 
 
 class bdq:
-    """This class implements the BDQ WFS API for Python. 
+    """This class implements a facade for the BDQ WFS and WTSS APIs .
 
 
     Attributes:
 
-        host (str): the BDQ WFS server URL.
+        wfs_server (str): the BDQ WFS server URL.
+        wtss_server (str): the BDQ WTSS server URL.
+        debug (boolean, optional): enable debug messages
         
     """
 
-    def __init__(self, host, **kwargs):
-        """Create a BDQ WFS client attached to the given host address (an URL).
+    def __init__(self, **kwargs):
+        """Create a BDQ WFS and BDQ WTSS clients attached to given host addresses.
+
 
         Args:
-            host (str): the server URL.
-            debug (bool): enable debug mode
+            wfs_server (str): the BDQ WFS server URL.
+            wtss_server (str): the BDQ WTSS server URL.
+            debug (boolean, optional): enable debug messages
         """
-        self.host = host
-        self.base_path = "wfs?service=wfs&version=1.0.0&outputFormat=application/json"
-        self.debug = False
 
-        invalid_parameters = set(kwargs) - set(["debug"]);
+        invalid_parameters = set(kwargs) - set(["debug", "wfs_server", "wtss_server"]);
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
+
+        self.debug = False
         if 'debug' in kwargs:
             if not type(kwargs['debug']) is bool:
                 raise AttributeError('debug must be a boolean')
             self.debug = kwargs['debug']
 
-    def _request(self, uri):
-        if self.debug:
-            print(uri)
-        r = requests.get(uri)
-        return r.content
+        if ('wfs_server' in kwargs) and ('wtss_server' in kwargs):
+            if type(kwargs['wfs_server'] is str):
+                self.wfs_server = kwargs['wfs_server']
+            else:
+                raise AttributeError('wfs_server must be a string')
+            if type(kwargs['wtss_server'] is str):
+                self.wtss_server = kwargs['wtss_server']
+            else:
+                raise AttributeError('wtss_server must be a string')
+        else:
+            raise AttributeError('wfs_server and wtss_server must be set')
+
+        self.wfs = wfs(self.wfs_server, debug=self.debug)
+        self.wtss = wtss(self.wtss_server)
 
     def list_features(self):
-        """Returns the list of all available features in service.
-
-        Returns:
-            dict: with a single key/value pair.
-
-            The key named 'features' is associated to a list of str:
-            { 'features' : ['ft1', 'ft2', ..., 'ftn'] }
-        
-        Raises:
-            ValueError: if feature name parameter is missing.
-            Exception: if the service returns a expcetion
+        """ Call bdq wfs list_features
         """
-        doc = self._request("{}/{}&request=GetCapabilities".format(self.host, self.base_path))
-        if 'exception' in doc:
-            raise Exception(doc["exception"])
-
-        xmldoc = minidom.parseString(doc)
-        itemlist = xmldoc.getElementsByTagName('FeatureType')
-
-        features = dict()
-        features[u'features'] = []
-
-        for s in itemlist:
-            features[u'features'].append(s.childNodes[0].firstChild.nodeValue)
-
-        return features
+        return self.wfs.list_features()
 
     def describe_feature(self, ft_name):
-        """Returns the metadata of a given feature.
-
-        Args:
-            ft_name (str): the feature name whose schema you are interested in.
-
-        Returns:
-            dict: a dictionary with some metadata about the informed feature.
-            
-        Raises:
-            ValueError: if feature parameter is missing.
-            AttributeError: if found an unexpected parameter type
-            Exception: if the service returns a expcetion
+        """ Call bdq wfs describe_feature
         """
-
-        if not ft_name:
-            raise ValueError("Missing feature name.")
-
-        doc = self._request("{}/{}&request=DescribeFeatureType&typeName={}".format(self.host, self.base_path, ft_name))
-        if 'exception' in doc:
-            raise Exception(doc["exception"])
-
-        js = json.loads(doc)
-
-        feature = dict()
-        feature['name'] = js['featureTypes'][0]['typeName']
-        feature['namespace'] = js['targetPrefix']
-        feature['full_name'] = "{}:{}".format(feature['namespace'], feature['name'])
-
-        feature['attributes'] = []
-        for prop in js['featureTypes'][0]['properties']:
-            feature['attributes'].append({'name': prop['name'], 'datatype': prop['localType']})
-
-        return feature
+        return self.wfs.describe_feature(ft_name)
 
     def feature_collection(self, ft_name, **kwargs):
-        """Retrieve the feature collection given feature.
-
-        Args:
-
-            ft_name (str): the feature name whose you are interested in.
-            max_features (int, optional): the number of records to get
-            attributes(list, tuple, str, optional): the list, tuple or string of attributes you are interested in to have the feature collection.
-            within(str, optional): a Polygon/MultiPolygon in Well-known text (WKT) format used filter features
-            filter(list, tuple, str, optional): the list, tuple or string of cql filter (http://docs.geoserver.org/latest/en/user/filter/function_reference.html#filter-function-reference)
-            sort_by(list, tuple, str, optional(: the list, tuple or string of attributes used to sort resulting collection
-
-        Raises:
-            ValueError: if latitude or longitude is out of range or any mandatory parameter is missing.
-            AttributeError: if found an unexpected parameter or unexpected type
-            Exception: if the service returns a expcetion
+        """ Call bdq wfs feature_collection and format the result to a pandas DataFrame
         """
-        if not ft_name:
-            raise ValueError("Missing feature name.")
+        fc = self.wfs.feature_collection(ft_name, **kwargs)
+        data = pd.DataFrame(fc['features'])
+        metadata = {'total': fc['total'], 'total_features': fc['total_features']}
 
-        invalid_parameters = set(kwargs) - set(["max_features", "attributes", "within", "filter", "sort_by"]);
-        if invalid_parameters:
-            raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
+        return data, metadata
 
-        max_features = ""
-        if 'max_features' in kwargs:
-            max_features = "&maxFeatures={}".format(kwargs['max_features'])
+    def feature_collection_len(self, ft_name, **kwargs):
+        """ Call bdq wfs feature_collection_len
+        """
+        return self.wfs.feature_collection_len(ft_name, **kwargs)
 
-        attributes = ""
-        if 'attributes' in kwargs:
-            if type(kwargs['attributes']) in [list, tuple]:
-                kwargs['attributes'] = ",".join(kwargs['attributes'])
-            elif not type(kwargs['attributes']) is str:
-                raise AttributeError('attributes must be a list, tuple or string')
-            attributes = "&propertyName=geometria,{}".format(kwargs['attributes'])
+    def list_coverages(self):
+        """ Call bdq wtss list_coverages
+        """
+        return self.wtss.list_coverages()
 
-        sort_by = ""
-        if 'sort_by' in kwargs:
-            if type(kwargs['sort_by']) in [list, tuple]:
-                kwargs['sort_by'] = ",".join(kwargs['sort_by'])
-            elif not type(kwargs['sort_by']) is str:
-                raise AttributeError('sort_by must be a list, tuple or string')
-            sort_by = "&sortBy={}".format(kwargs['sort_by'])
+    def describe_coverage(self, cv_name):
+        """ Call bdq wtss describe_coverage
+        """
+        return self.wtss.describe_coverage(cv_name)
 
-        cql_filter = ""
-        if 'within' in kwargs:
-            if not type(kwargs['within']) is str:
-                raise AttributeError('within must be a string')
-            cql_filter = "&CQL_FILTER=WITHIN(geometria,{})".format(quote(kwargs['within']))
+    def time_series(self, coverage, attributes, latitude, longitude, start_date=None, end_date=None):
+        """ Call bdq wtss time_series and format the result to a pandas DataFrame
+        """
+        cv = self.wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
+        data = pd.DataFrame(cv.attributes, index=cv.timeline)
+        metadata = {'total': len(cv.timeline)}
 
-        if 'filter' in kwargs:
-            if type(kwargs['filter']) in [list, tuple]:
-                kwargs['filter'] = "+AND+".join(kwargs['filter'])
-            elif not type(kwargs['attributes']) is str:
-                raise AttributeError('filter must be a list, tuple or string')
-            if not cql_filter:
-                cql_filter = "&CQL_FILTER="
-            else:
-                cql_filter += "+AND+"
-            cql_filter += kwargs['filter']
-
-        doc = self._request(
-            "{}/{}&request=GetFeature&typeName={}{}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
-                                                                attributes, cql_filter,sort_by))
-        if 'exception' in doc:
-            raise Exception(doc["exception"])
-
-        js = json.loads(doc)
-
-        fc = dict()
-        fc['total_features'] = js['totalFeatures']
-        fc['total'] = len(js['features'])
-        fc['features'] = [];
-        for item in js['features']:
-            feature = {'coordinates': item['geometry']['coordinates']};
-            feature.update(item['properties'])
-            fc['features'].append(feature)
-
-        return fc
+        return data, metadata
