@@ -1,6 +1,4 @@
-# Python Client API for BDQ Web Feature Service (WFS)
-
-
+# Python Client API for BDQ Web Services (WFS and WTSS) 
 
 ## Building and installing bdq.py from source
 **1.** In the shell, type
