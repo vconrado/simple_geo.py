@@ -49,7 +49,7 @@ fc_len = b.feature_collection_len("esensing:focos_bra_2016",
 print(fc_len)
 ```
 
-### Retrieving BDQ Features
+### Retrieving BDQ Coverages
 ```python
 from bdq import bdq
 
