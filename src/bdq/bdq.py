@@ -40,8 +40,8 @@ class bdq:
 
     Attributes:
 
-        wfs_server (str): the BDQ WFS server URL.
-        wtss_server (str): the BDQ WTSS server URL.
+        wfs (str): the BDQ WFS server URL.
+        wtss (str): the BDQ WTSS server URL.
         debug (boolean, optional): enable debug messages
         
     """
@@ -51,12 +51,12 @@ class bdq:
 
 
         Args:
-            wfs_server (str): the BDQ WFS server URL.
-            wtss_server (str): the BDQ WTSS server URL.
+            wfs (str): the BDQ WFS server URL.
+            wtss (str): the BDQ WTSS server URL.
             debug (boolean, optional): enable debug messages
         """
 
-        invalid_parameters = set(kwargs) - set(["debug", "wfs_server", "wtss_server"]);
+        invalid_parameters = set(kwargs) - set(["debug", "wfs", "wtss"]);
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
 
@@ -66,17 +66,17 @@ class bdq:
                 raise AttributeError('debug must be a boolean')
             self.debug = kwargs['debug']
 
-        if ('wfs_server' in kwargs) and ('wtss_server' in kwargs):
-            if type(kwargs['wfs_server'] is str):
-                self.wfs_server = kwargs['wfs_server']
+        if ('wfs' in kwargs) and ('wtss' in kwargs):
+            if type(kwargs['wfs'] is str):
+                self.wfs_server = kwargs['wfs']
             else:
-                raise AttributeError('wfs_server must be a string')
-            if type(kwargs['wtss_server'] is str):
-                self.wtss_server = kwargs['wtss_server']
+                raise AttributeError('wfs must be a string')
+            if type(kwargs['wtss'] is str):
+                self.wtss_server = kwargs['wtss']
             else:
-                raise AttributeError('wtss_server must be a string')
+                raise AttributeError('wtss must be a string')
         else:
-            raise AttributeError('wfs_server and wtss_server must be set')
+            raise AttributeError('wfs and wtss must be set')
 
         self.wfs = wfs(self.wfs_server, debug=self.debug)
         self.wtss = wtss(self.wtss_server)

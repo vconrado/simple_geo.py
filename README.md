@@ -15,8 +15,8 @@
 from bdq import bdq
 
 # Connecting to BDQ servers
-b = bdq(wfs_server="http://localhost:8080/geoserver-esensing/",
-        wtss_server="http://localhost:7654")
+b = bdq(wfs="http://localhost:8080/geoserver-esensing/",
+        wtss="http://localhost:7654")
 
 # Retrieving the list of all available features in the service
 ft_list = b.list_features()
@@ -52,8 +52,8 @@ print(fc_len)
 from bdq import bdq
 
 # Connecting to BDQ servers
-b = bdq(wfs_server="http://localhost:8080/geoserver-esensing/",
-        wtss_server="http://localhost:7654")
+b = bdq(wfs="http://localhost:8080/geoserver-esensing/",
+        wtss="http://localhost:7654")
 
 # Retrieving the list of all available coverages in the service
 cv_list = b.list_coverages()

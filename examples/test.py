@@ -8,7 +8,7 @@ from bdq import bdq
 ######################################################################################################################
 # BDQ Features
 
-b = bdq(wfs_server="http://localhost:8080/geoserver-esensing/", debug=False, wtss_server="http://localhost:7654")
+b = bdq(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://localhost:7654", debug=True)
 
 print("Features")
 # Retrieving the list of all available features in the service
