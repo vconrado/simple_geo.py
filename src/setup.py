@@ -21,12 +21,12 @@
 
 from setuptools import setup
 
-setup(name='bdq',
+setup(name='simple_geo',
       version='0.1.0',
-      description='Python Client API for BDQ Web Feature Service',
-      url='https://github.com/vconrado/bdq.py',
+      description='Python Client API for WFS and WTSS',
+      url='https://github.com/vconrado/simple_geo.py',
       author='Vitor Conrado Faria Gomes',
       author_email='vconrado@gmail.com',
       license='LGPL3',
-      packages=['bdq'],
+      packages=['simple_geo'],
       zip_safe=False)

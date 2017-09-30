@@ -1,21 +1,21 @@
-# Python Client API for BDQ Web Services (WFS and WTSS) 
+# Python Client API for Web Services (WFS and WTSS) 
 
-## Building and installing bdq.py from source
+## Building and installing simple_geo.py from source
 **1.** In the shell, type
 ```bash
-  git clone https://github.com/vconrado/bdq.py.git
-  cd bdq.py/src
+  git clone https://github.com/vconrado/simple_geo.py.git
+  cd simple_geo.py/src
   pip install .
 ```
 
-## Using bdq.py
+## Using simple_geo.py
 
-### Retrieving BDQ Features
+### Retrieving Features
 ```python
-from bdq import bdq
+from simple_geo import simple_geo as sgeo 
 
-# Connecting to BDQ servers
-b = bdq(wfs="http://localhost:8080/geoserver-esensing/",
+# Connecting to servers
+b = sgeo(wfs="http://localhost:8080/geoserver-esensing/",
         wtss="http://localhost:7654")
 
 # Retrieving the list of all available features in the service
@@ -47,12 +47,12 @@ fc_len = b.feature_collection_len("esensing:focos_bra_2016",
 print(fc_len)
 ```
 
-### Retrieving BDQ Coverages
+### Retrieving Coverages
 ```python
-from bdq import bdq
+from simple_geo import simple_geo as sgeo
 
-# Connecting to BDQ servers
-b = bdq(wfs="http://localhost:8080/geoserver-esensing/",
+# Connecting to servers
+b = sgeo(wfs="http://localhost:8080/geoserver-esensing/",
         wtss="http://localhost:7654")
 
 # Retrieving the list of all available coverages in the service

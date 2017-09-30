@@ -38,7 +38,7 @@ except ImportError:
 cache = None
 
 
-class bdq:
+class simple_geo:
     """This class implements a facade for the BDQ WFS and WTSS APIs .
 
 
