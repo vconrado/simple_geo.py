@@ -22,6 +22,7 @@
 import json
 from xml.dom import minidom
 import requests
+from shapely.geometry import Point
 
 try:
     # For Python 3.0 and later
@@ -203,10 +204,10 @@ class wfs:
         fc['total'] = len(js['features'])
         fc['features'] = [];
         for item in js['features']:
-            feature = {'coordinates': item['geometry']['coordinates']};
+            feature = {'geometry':  Point(item['geometry']['coordinates'][0], item['geometry']['coordinates'][1])};
             feature.update(item['properties'])
             fc['features'].append(feature)
-
+        fc['crs'] = js['crs']
         return fc
 
     def feature_collection_len(self, ft_name, **kwargs):

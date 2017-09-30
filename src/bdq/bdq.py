@@ -25,6 +25,8 @@ import requests
 from wfs import wfs
 from wtss import wtss
 import pandas as pd
+from geopandas import GeoDataFrame
+from shapely.geometry import Point
 
 try:
     # For Python 3.0 and later
@@ -32,6 +34,8 @@ try:
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import quote
+
+cache = None
 
 
 class bdq:
@@ -94,11 +98,51 @@ class bdq:
     def feature_collection(self, ft_name, **kwargs):
         """ Call bdq wfs feature_collection and format the result to a pandas DataFrame
         """
+        global cache
+        cv_list = None
+        if 'ts' in kwargs:
+            cv_list = kwargs['ts']
+            del kwargs['ts']
         fc = self.wfs.feature_collection(ft_name, **kwargs)
-        data = pd.DataFrame(fc['features'])
+        geo_data = pd.DataFrame(fc['features'])
+        geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs']['properties']['name'])
         metadata = {'total': fc['total'], 'total_features': fc['total_features']}
 
-        return data, metadata
+        # retrieve coverage attributes
+        if cv_list is not None:
+            # TODO: paralelizar essas chamadas
+            for cv in cv_list:
+                if type(cv['attributes']) is str:
+                    cv['attributes'] = tuple([cv['attributes']])
+                # create columns as object to support lists
+                for c in cv['attributes']:
+                    name = '{}.{}'.format(cv['coverage'], c)
+                    geo_data[name] = ''
+                    geo_data[name] = geo_data[name].astype(object)
+                s_date = None
+                if 'start_date' in cv:
+                    s_date = cv['start_date'];
+                e_date = None
+                if 'end_date' in cv:
+                    e_date = cv['end_date'];
+                for idx, row in geo_data.iterrows():
+                    ts, ts_metadata = self.time_series(cv['coverage'],
+                                                       cv['attributes'],
+                                                       row['geometry'].y,
+                                                       row['geometry'].x,
+                                                       s_date,
+                                                       e_date)
+                    for c in cv['attributes']:
+                        name = '{}.{}'.format(cv['coverage'], c)
+                        if s_date == e_date and s_date is not None:
+                            if ts_metadata['total'] == 1:
+                                geo_data.set_value(idx, name, ts[c].values.tolist()[0])
+                            else:
+                                geo_data.set_value(idx, name, None)
+                        else:
+                            geo_data.set_value(idx, name, ts[c].values.tolist())
+
+        return geo_data, metadata
 
     def feature_collection_len(self, ft_name, **kwargs):
         """ Call bdq wfs feature_collection_len
