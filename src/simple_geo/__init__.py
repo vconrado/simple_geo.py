@@ -19,5 +19,5 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-"""Python Client API for BDQ Web Feature Service (WFS)."""
-from .bdq import bdq
+"""Python Client API for Web Feature Service (WFS)."""
+from .simple_geo import simple_geo
