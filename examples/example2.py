@@ -8,7 +8,7 @@ from simple_geo import simple_geo as sgeo
 ######################################################################################################################
 # BDQ Features
 
-s = sgeo(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://www.dpi.inpe.br/ts", debug=True)
+s = sgeo(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://localhost:7654/ts", debug=True)
 
 # Retrieving a selected elements for a given feature
 fc, fc_metadata = s.feature_collection("esensing:focos_bra_2016",
