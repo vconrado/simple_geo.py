@@ -96,7 +96,7 @@ class simple_geo:
         return self.wfs.describe_feature(ft_name)
 
     def feature_collection(self, ft_name, **kwargs):
-        """ Call bdq wfs feature_collection and format the result to a pandas DataFrame
+        """ Call wfs feature_collection and format the result to a pandas DataFrame
         """
         global cache
         cv_list = None
@@ -104,9 +104,11 @@ class simple_geo:
             cv_list = kwargs['ts']
             del kwargs['ts']
         fc = self.wfs.feature_collection(ft_name, **kwargs)
-        geo_data = pd.DataFrame(fc['features'])
-        geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs']['properties']['name'])
         metadata = {'total': fc['total'], 'total_features': fc['total_features']}
+        if len(fc['features']) == 0:
+            return pd.DataFrame(), metadata
+        geo_data = pd.DataFrame(fc['features'])
+        geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs'])
 
         # retrieve coverage attributes
         if cv_list is not None:

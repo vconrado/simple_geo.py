@@ -15,15 +15,28 @@
      ft = s.features(filter=, within=, order=, ts=ts).get();
         - Se feature for Point TS ok
         - Se for linha?
-        - Se for geometria: precisa associar uma operação: máximo, minimo, média, mediana
-        
+        - Se for geometria: precisa associar uma operação reduce: máximo, minimo, média, mediana
+
 
 
 - Criar README com pequenos exemplos
 - Criar jupyter notebook para cada exemplo (criar link no readme)
 
 
+Na integração entre WFS e WTSS
+  - Fazer mais testes
+  - Integrar data (dia, período, dias para trás, frente e etc)
 
+Filter: Implementar sgeo.AND e sgeo.OR
 
+Readme:
+  Implementrar vários trechos de código simples incremenais
+  
 
+docs:
+  Colocar um notebook com os exemplos
+  Se aceito, colocar o artigo como referencia na pagina e incluir o link para o pdf
+  
+
+  Implementar Cache (wfs e wtss, no simple_geo)
 
