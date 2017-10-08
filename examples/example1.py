@@ -8,7 +8,7 @@ from simple_geo import simple_geo as sgeo
 ######################################################################################################################
 # simple_geo Features
 
-s = sgeo(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://localhost:7654/ts", debug=True)
+s = sgeo(wfs="http://localhost:8080/geoserver-esensing", wtss="http://localhost:7654/ts", debug=True)
 
 print("Features")
 # Retrieving the list of all available features in the service
