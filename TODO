@@ -1,4 +1,3 @@
-- Migrar implementação do WFS para OWSLib
 
 - Migrar para abordagem get:
     s = sgeo(...);
