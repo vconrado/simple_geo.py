@@ -6,3 +6,4 @@
 src/build/
 src/dist/
 .idea/
+.ipynb_checkpoints
