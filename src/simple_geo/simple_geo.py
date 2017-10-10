@@ -1,32 +1,29 @@
+# -*- coding: utf-8 -*-
 #
 #   Copyright (C) 2017 National Institute For Space Research (INPE) - Brazil.
 #
-#  This file is part of Python Client API for BDQ Web Feature Service.
+#  This file is part of simple_geo.py toolkit.
 #
-#  API for BDQ Web Feature Service is free software: you can
+#  simple_geo.py toolkit is free software: you can
 #  redistribute it and/or modify it under the terms of the
 #  GNU Lesser General Public License as published by
 #  the Free Software Foundation, either version 3 of the License,
 #  or (at your option) any later version.
 #
-#  API for BDQ Web Feature Service for Python is distributed in the hope that
+#  simple_geo.py toolkit is distributed in the hope that
 #  it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  GNU Lesser General Public License for more details.
 #
 #  You should have received a copy of the GNU Lesser General Public License
-#  along with BDQ Web Feature Service for Python. See LICENSE. If not, write to
+#  along with simple_geo.py toolkit. See LICENSE. If not, write to
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-import json
-from xml.dom import minidom
-import requests
 from wfs import wfs
 from wtss import wtss
 import pandas as pd
 from geopandas import GeoDataFrame
-from shapely.geometry import Point
 
 try:
     # For Python 3.0 and later
@@ -51,16 +48,14 @@ class simple_geo:
     """
 
     def __init__(self, **kwargs):
-        """Create a BDQ WFS and BDQ WTSS clients attached to given host addresses.
-
-
+        """Create wfs and wtss clients attached to given host addresses.
         Args:
-            wfs (str): the BDQ WFS server URL.
-            wtss (str): the BDQ WTSS server URL.
+            wfs (str): WFS server URL
+            wtss (str): WTSS server URL
             debug (boolean, optional): enable debug messages
         """
 
-        invalid_parameters = set(kwargs) - set(["debug", "wfs", "wtss"]);
+        invalid_parameters = set(kwargs) - {"debug", "wfs", "wtss"}
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
 
@@ -86,19 +81,16 @@ class simple_geo:
         self.wtss = wtss(self.wtss_server)
 
     def list_features(self):
-        """ Call bdq wfs list_features
-        """
+        """Call wfs list_features"""
         return self.wfs.list_features()
 
     def describe_feature(self, ft_name):
-        """ Call bdq wfs describe_feature
-        """
+        """Call wfs describe_feature"""
         return self.wfs.describe_feature(ft_name)
 
     def feature_collection(self, ft_name, **kwargs):
-        """ Call wfs feature_collection and format the result to a pandas DataFrame
-        """
-        global cache
+        """Call wfs feature_collection and format the result to a pandas DataFrame"""
+
         cv_list = None
         if 'ts' in kwargs:
             cv_list = kwargs['ts']
@@ -123,10 +115,10 @@ class simple_geo:
                     geo_data[name] = geo_data[name].astype(object)
                 s_date = None
                 if 'start_date' in cv:
-                    s_date = cv['start_date'];
+                    s_date = cv['start_date']
                 e_date = None
                 if 'end_date' in cv:
-                    e_date = cv['end_date'];
+                    e_date = cv['end_date']
                 for idx, row in geo_data.iterrows():
                     ts, ts_metadata = self.time_series(cv['coverage'],
                                                        cv['attributes'],
@@ -147,23 +139,19 @@ class simple_geo:
         return geo_data, metadata
 
     def feature_collection_len(self, ft_name, **kwargs):
-        """ Call bdq wfs feature_collection_len
-        """
+        """Call bdq wfs feature_collection_len"""
         return self.wfs.feature_collection_len(ft_name, **kwargs)
 
     def list_coverages(self):
-        """ Call bdq wtss list_coverages
-        """
+        """ Call bdq wtss list_coverages"""
         return self.wtss.list_coverages()
 
     def describe_coverage(self, cv_name):
-        """ Call bdq wtss describe_coverage
-        """
+        """ Call bdq wtss describe_coverage"""
         return self.wtss.describe_coverage(cv_name)
 
     def time_series(self, coverage, attributes, latitude, longitude, start_date=None, end_date=None):
-        """ Call bdq wtss time_series and format the result to a pandas DataFrame
-        """
+        """ Call wtss time_series and format the result to a pandas DataFrame"""
         cv = self.wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
         data = pd.DataFrame(cv.attributes, index=cv.timeline)
         metadata = {'total': len(cv.timeline)}
