@@ -55,6 +55,11 @@ fc, fc_metadata = s.feature_collection("esensing:focos_bra_2016",
 print(fc)
 print(fc_metadata)
 
+
+fc, fc_metadata = s.feature_collection("esensing:municipios_bra", max_features=10)
+print(fc)
+print(fc_metadata)
+
 # Retrieving collection length of selected elements for a given feature
 fc_len = s.feature_collection_len("esensing:focos_bra_2016",
                                   within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
