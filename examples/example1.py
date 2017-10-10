@@ -20,16 +20,20 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 import sys
+import time
 
 # to use local version of simple_geo
 sys.path.insert(0, '../src/simple_geo')
 
 from simple_geo import simple_geo as sgeo
 
+
+start_time = time.time()
 ######################################################################################################################
 # simple_geo Features
 
-s = sgeo(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://localhost:7654", debug=False)
+s = sgeo(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://localhost:7654", debug=True, cache=False)
+#s.clear_cache()
 
 print("Features")
 # Retrieving the list of all available features in the service
@@ -60,6 +64,10 @@ fc, fc_metadata = s.feature_collection("esensing:municipios_bra", max_features=1
 print(fc)
 print(fc_metadata)
 
+fc, fc_metadata = s.feature_collection("esensing:estados_bra", max_features=10)
+print(fc)
+print(fc_metadata)
+
 # Retrieving collection length of selected elements for a given feature
 fc_len = s.feature_collection_len("esensing:focos_bra_2016",
                                   within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
@@ -84,3 +92,5 @@ print(cv_scheme)
 ts, ts_metadata = s.time_series("climatologia", ("precipitation", "temperature", "humidity"), -12, -54)
 print(ts)
 print(ts_metadata)
+
+print("--- %s seconds ---" % (time.time() - start_time))

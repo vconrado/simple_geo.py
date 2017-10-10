@@ -20,10 +20,14 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-from wfs import wfs
-from wtss import wtss
+import os
+import json
+import pickle
+import hashlib
 import pandas as pd
 from geopandas import GeoDataFrame
+from wfs import wfs
+from wtss import wtss
 
 try:
     # For Python 3.0 and later
@@ -55,7 +59,7 @@ class simple_geo:
             debug (boolean, optional): enable debug messages
         """
 
-        invalid_parameters = set(kwargs) - {"debug", "wfs", "wtss"}
+        invalid_parameters = set(kwargs) - {"debug", "wfs", "wtss", "cache", "cache_dir"}
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
 
@@ -65,37 +69,61 @@ class simple_geo:
                 raise AttributeError('debug must be a boolean')
             self.debug = kwargs['debug']
 
-        if ('wfs' in kwargs) and ('wtss' in kwargs):
-            if type(kwargs['wfs'] is str):
-                self.wfs_server = kwargs['wfs']
-            else:
-                raise AttributeError('wfs must be a string')
-            if type(kwargs['wtss'] is str):
-                self.wtss_server = kwargs['wtss']
-            else:
-                raise AttributeError('wtss must be a string')
-        else:
-            raise AttributeError('wfs and wtss must be set')
+        self.cache = False
+        if 'cache' in kwargs:
+            if not type(kwargs['cache']) is bool:
+                raise AttributeError('cache must be a boolean')
+            self.cache = kwargs['cache']
 
-        self.wfs = wfs(self.wfs_server, debug=self.debug)
-        self.wtss = wtss(self.wtss_server)
+        self.cache_dir = "./.sgeo/cache"
+        if 'cache_dir' in kwargs:
+            if not type(kwargs['cache_dir']) is str:
+                raise AttributeError('cache_dir must be a str')
+            self.cache_dir = kwargs['cache_dir']
+
+        self.wfs = None
+        if type(kwargs['wfs'] is str):
+            self.wfs_server = kwargs['wfs']
+            self.wfs = wfs(kwargs['wfs'], debug=self.debug)
+        else:
+            raise AttributeError('wfs must be a string')
+
+        self.wtss = None
+        if type(kwargs['wtss'] is str):
+            self.wtss_server = kwargs['wtss']
+            self.wtss = wtss(kwargs['wtss'])
+        else:
+            raise AttributeError('wtss must be a string')
 
     def list_features(self):
         """Call wfs list_features"""
+        if self.wfs is None:
+            raise AttributeError('wfs server is not defined')
         return self.wfs.list_features()
 
     def describe_feature(self, ft_name):
         """Call wfs describe_feature"""
+        if self.wfs is None:
+            raise AttributeError('wfs server is not defined')
         return self.wfs.describe_feature(ft_name)
 
     def feature_collection(self, ft_name, **kwargs):
         """Call wfs feature_collection and format the result to a pandas DataFrame"""
-
+        if self.wfs is None:
+            raise AttributeError('wfs server is not defined')
         cv_list = None
         if 'ts' in kwargs:
             cv_list = kwargs['ts']
             del kwargs['ts']
-        fc = self.wfs.feature_collection(ft_name, **kwargs)
+
+        fc = None
+        if self.cache:
+            fc = self._get_cache(self.wfs_server, "feature_collection", ft_name, kwargs)
+        if fc is None:
+            fc = self.wfs.feature_collection(ft_name, **kwargs)
+            if self.cache:
+                self._set_cache(self.wfs_server, "feature_collection", ft_name, kwargs, fc)
+
         metadata = {'total': fc['total'], 'total_features': fc['total_features']}
         if len(fc['features']) == 0:
             return pd.DataFrame(), metadata
@@ -140,20 +168,77 @@ class simple_geo:
 
     def feature_collection_len(self, ft_name, **kwargs):
         """Call bdq wfs feature_collection_len"""
-        return self.wfs.feature_collection_len(ft_name, **kwargs)
+        if self.wfs is None:
+            raise AttributeError('wfs server is not defined')
+
+        fc_len = None
+        if self.cache:
+            fc_len = self._get_cache(self.wfs_server, "feature_collection_len", ft_name, kwargs)
+        if fc_len is None:
+            fc_len = self.wfs.feature_collection(ft_name, **kwargs)
+            if self.cache:
+                self._set_cache(self.wfs_server, "feature_collection_len", ft_name, kwargs, fc_len)
+
+        return fc_len
 
     def list_coverages(self):
         """ Call bdq wtss list_coverages"""
+        if self.wtss is None:
+            raise AttributeError('wtss server is not defined')
         return self.wtss.list_coverages()
 
     def describe_coverage(self, cv_name):
         """ Call bdq wtss describe_coverage"""
+        if self.wtss is None:
+            raise AttributeError('wtss server is not defined')
         return self.wtss.describe_coverage(cv_name)
 
     def time_series(self, coverage, attributes, latitude, longitude, start_date=None, end_date=None):
         """ Call wtss time_series and format the result to a pandas DataFrame"""
+        if self.wtss is None:
+            raise AttributeError('wtss server is not defined')
         cv = self.wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
         data = pd.DataFrame(cv.attributes, index=cv.timeline)
         metadata = {'total': len(cv.timeline)}
 
         return data, metadata
+
+    def _get_cache(self, server, resource_type, resource_name, kwargs):
+        """ Try to get cached request"""
+        hash_params = simple_geo._get_cache_hash(server, resource_type, resource_name, kwargs)
+        file_path = "{}/{}.pkl".format(self.cache_dir, hash_params)
+        if os.path.isfile(file_path):
+            if os.path.getsize(file_path) > 0:
+                with open(file_path, 'rb') as handle:
+                    if self.debug:
+                        print("Cache found !")
+                    content = pickle.load(handle)
+                    return content
+        if self.debug:
+            print("Cache not found !")
+        return None
+
+    def _set_cache(self, server, resource_type, resource_name, kwargs, content):
+        """ Store a response on cache"""
+        hash_params = simple_geo._get_cache_hash(server, resource_type, resource_name, kwargs)
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        file_path = "{}/{}.pkl".format(self.cache_dir, hash_params)
+        with open(file_path, 'wb') as handle:
+            pickle.dump(content, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def _get_cache_hash(server, resource_type, resource_name, kwargs):
+        """Creates an hash from request parameters"""
+        params = "{}.{}.{}.{}".format(server, resource_type, resource_name, json.dumps(kwargs))
+        return hashlib.sha256(params).hexdigest()
+
+    def clear_cache(self):
+        if self.debug:
+            print("Cleaning cache!")
+        if os.path.exists(self.cache_dir):
+            for root, dirs, files in os.walk(self.cache_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
