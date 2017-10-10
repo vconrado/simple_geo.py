@@ -23,7 +23,7 @@
 import json
 from xml.dom import minidom
 import requests
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon, MultiPolygon
 
 try:
     # For Python 3.0 and later
@@ -207,7 +207,15 @@ class wfs:
         fc['total'] = len(js['features'])
         fc['features'] = []
         for item in js['features']:
-            feature = {'geometry':  Point(item['geometry']['coordinates'][0], item['geometry']['coordinates'][1])}
+            if feature_desc['geometry']['type'] == 'gml:Point':
+                feature = {'geometry': Point(item['geometry']['coordinates'][0], item['geometry']['coordinates'][1])}
+            elif feature_desc['geometry']['type'] == 'gml:MultiPolygon':
+                polygons = []
+                for polygon in item['geometry']['coordinates']:
+                    polygons += [Polygon(lr) for lr in polygon]
+                feature = {'geometry': MultiPolygon(polygons)}
+            else:
+                raise Exception('Unsupported geometry type.')
             feature.update(item['properties'])
             fc['features'].append(feature)
         fc['crs'] = js['crs']
