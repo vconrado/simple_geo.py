@@ -57,11 +57,18 @@ class wfs:
                 raise AttributeError('debug must be a boolean')
             self.debug = kwargs['debug']
 
-    def _request(self, uri):
+    def _get(self, uri):
         if self.debug:
-            print(uri)
+            print("GET",uri)
         r = requests.get(uri)
         return r.content
+
+    def _post(self, uri, data=None):
+        if self.debug:
+            print("POST",uri)
+            headers = {'Content-Type':'application/x-www-form-urlencoded'}
+        r = requests.post(uri, data=data, headers=headers)
+        return r.text
 
     def list_features(self):
         """Returns the list of all available features in service.
@@ -73,7 +80,7 @@ class wfs:
             ValueError: if feature name parameter is missing
             Exception: if the service returns a exception
         """
-        doc = self._request("{}/{}&request=GetCapabilities".format(self.host, self.base_path))
+        doc = self._get("{}/{}&request=GetCapabilities".format(self.host, self.base_path))
         if 'exception' in doc:
             raise Exception(doc["exception"])
 
@@ -106,7 +113,7 @@ class wfs:
         if not ft_name:
             raise ValueError("Missing feature name.")
 
-        doc = self._request("{}/{}&request=DescribeFeatureType&typeName={}".format(self.host, self.base_path, ft_name))
+        doc = self._get("{}/{}&request=DescribeFeatureType&typeName={}".format(self.host, self.base_path, ft_name))
         if 'exception' in doc:
             raise Exception(doc["exception"])
 
@@ -157,9 +164,19 @@ class wfs:
         feature_desc = self.describe_feature(ft_name)
         geometry_name = feature_desc['geometry']['name']
 
+        # data = {
+        #     'service':'wfs',
+        #     'version': '1.1.0',
+        #     'outputFormat':'application/json'
+        # }
+        data = {
+            'typeName': ft_name
+        }
+
         max_features = ""
         if 'max_features' in kwargs:
             max_features = "&maxFeatures={}".format(kwargs['max_features'])
+            data['max_features'] = kwargs['max_features']
 
         attributes = ""
         if 'attributes' in kwargs:
@@ -168,6 +185,7 @@ class wfs:
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('attributes must be a list, tuple or string')
             attributes = "&propertyName={},{}".format(geometry_name, kwargs['attributes'])
+            data['propertyName'] = "{},{}".format(geometry_name, kwargs['attributes'])
 
         sort_by = ""
         if 'sort_by' in kwargs:
@@ -176,12 +194,14 @@ class wfs:
             elif not type(kwargs['sort_by']) is str:
                 raise AttributeError('sort_by must be a list, tuple or string')
             sort_by = "&sortBy={}".format(kwargs['sort_by'])
+            data['sortBy'] = kwargs['sort_by']
 
         cql_filter = ""
         if 'within' in kwargs:
             if not type(kwargs['within']) is str:
                 raise AttributeError('within must be a string')
             cql_filter = "&CQL_FILTER=WITHIN({},{})".format(geometry_name, quote(kwargs['within']))
+            data['CQL_FILTER'] = "WITHIN({},{})".format(geometry_name, (kwargs['within']))
 
         if 'filter' in kwargs:
             if type(kwargs['filter']) in [list, tuple]:
@@ -192,11 +212,21 @@ class wfs:
                 cql_filter = "&CQL_FILTER="
             else:
                 cql_filter += "+AND+"
+                data['CQL_FILTER'] += "&quot;and&quot;"
             cql_filter += kwargs['filter']
+            data['CQL_FILTER'] += kwargs['filter']
 
-        doc = self._request(
-            "{}/{}&request=GetFeature&typeName={}{}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
-                                                                  attributes, cql_filter, sort_by))
+        # doc = self._get(
+        #     "{}/{}&request=GetFeature&typeName={}{}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
+        #                                                           attributes, cql_filter, sort_by))
+
+        a = ""
+        for key, value in data.iteritems():
+            a += "&{}={}".format(key, value)
+        print(a)
+        doc = self._post("{}/{}&request=GetFeature".format(self.host, self.base_path), data=data)
+
+        # print(doc_post)
         if 'exception' in doc:
             raise Exception(doc["exception"])
 

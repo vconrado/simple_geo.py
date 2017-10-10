@@ -52,8 +52,8 @@ print(ft_scheme)
 fc, fc_metadata = s.feature_collection("esensing:focos_bra_2016",
                                        attributes=("id", "municipio", "timestamp", "regiao"),
                                        within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
-                                       filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
-                                               "timestamp<'2016-02-01'"],
+                                       #filter=["satelite_referencia='true'", "timestamp>='2016-01-01'", "timestamp<'2016-02-01'"],
+                                        filter=["satelite_referencia=true"],
                                        sort_by=("regiao", "municipio"),
                                        max_features=10)
 print(fc)
