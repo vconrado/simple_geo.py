@@ -27,13 +27,13 @@ sys.path.insert(0, '../src/simple_geo')
 
 from simple_geo import simple_geo as sgeo
 
-
 start_time = time.time()
 ######################################################################################################################
 # simple_geo Features
 
-s = sgeo(wfs="http://localhost:8080/geoserver-esensing/", wtss="http://localhost:7654", debug=True, cache=False)
-#s.clear_cache()
+s = sgeo(wfs="http://wfs_server:8080/geoserver-esensing", wtss="http://wtss_server:7654", debug=False,
+         cache=False)
+s.clear_cache()
 
 print("Features")
 # Retrieving the list of all available features in the service
@@ -45,26 +45,30 @@ ft_scheme = s.describe_feature("esensing:focos_bra_2016")
 print(ft_scheme)
 
 # Retrieving the collection for a given feature
-#fc, fc_metadata = b.feature_collection("esensing:focos_bra_2016")
+# fc, fc_metadata = b.feature_collection("esensing:focos_bra_2016")
 
+
+fc, fc_metadata = s.feature_collection("esensing:estados_bra",
+                                       filter=["nome='Rio Grande do Sul'"],
+                                       max_features=1)
+
+print(fc)
 
 # Retrieving a selected elements for a given feature
 fc, fc_metadata = s.feature_collection("esensing:focos_bra_2016",
-                                       attributes=("id", "municipio", "timestamp", "regiao"),
-                                       within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
+                                       attributes=("id", "municipio", "timestamp", "regiao", "estado"),
+                                       within=fc.loc[0, 'geometry'].wkt,
                                        filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
                                                "timestamp<'2016-02-01'"],
+                                       # filter=["satelite_referencia=true"],
                                        sort_by=("regiao", "municipio"),
                                        max_features=10)
 print(fc)
 print(fc_metadata)
 
-
-fc, fc_metadata = s.feature_collection("esensing:municipios_bra", max_features=10)
-print(fc)
-print(fc_metadata)
-
-fc, fc_metadata = s.feature_collection("esensing:estados_bra", max_features=10)
+fc, fc_metadata = s.feature_collection("esensing:municipios_bra",
+                                       filter=["nome='Ilhabela'"],
+                                       max_features=1)
 print(fc)
 print(fc_metadata)
 
@@ -73,7 +77,7 @@ fc_len = s.feature_collection_len("esensing:focos_bra_2016",
                                   within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
                                   filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
                                           "timestamp<'2016-02-01'"])
-print("len",fc_len)
+print("len", fc_len)
 
 ######################################################################################################################
 # BDQ Coverages
