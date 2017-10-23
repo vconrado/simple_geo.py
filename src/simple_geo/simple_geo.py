@@ -115,6 +115,8 @@ class simple_geo:
         if 'ts' in kwargs:
             cv_list = kwargs['ts']
             del kwargs['ts']
+            # TODO: implementar
+            raise NotImplementedError('WFS and WTSS integration is not yet implemented')
 
         fc = None
         if self.cache:
@@ -197,7 +199,17 @@ class simple_geo:
         """ Call wtss time_series and format the result to a pandas DataFrame"""
         if self.wtss is None:
             raise AttributeError('wtss server is not defined')
-        cv = self.wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
+
+        cv = None
+        if self.cache:
+            kwargs = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
+                      'end_date': end_date}
+            cv = self._get_cache(self.wfs_server, "time_series", coverage, kwargs)
+        if cv is None:
+            cv = self.wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
+            if self.cache:
+                self._set_cache(self.wfs_server, "time_series", coverage, kwargs, cv)
+
         data = pd.DataFrame(cv.attributes, index=cv.timeline)
         metadata = {'total': len(cv.timeline)}
 
@@ -206,7 +218,7 @@ class simple_geo:
     def _get_cache(self, server, resource_type, resource_name, kwargs):
         """ Try to get cached request"""
         hash_params = simple_geo._get_cache_hash(server, resource_type, resource_name, kwargs)
-        file_path = "{}/{}.pkl".format(self.cache_dir, hash_params)
+        file_path = "{}/{}/{}.pkl".format(self.cache_dir, resource_type, hash_params)
         if os.path.isfile(file_path):
             if os.path.getsize(file_path) > 0:
                 with open(file_path, 'rb') as handle:
@@ -221,9 +233,10 @@ class simple_geo:
     def _set_cache(self, server, resource_type, resource_name, kwargs, content):
         """ Store a response on cache"""
         hash_params = simple_geo._get_cache_hash(server, resource_type, resource_name, kwargs)
-        if not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir)
-        file_path = "{}/{}.pkl".format(self.cache_dir, hash_params)
+        path_cache = "{}/{}".format(self.cache_dir, resource_type)
+        if not os.path.exists(path_cache):
+            os.makedirs(path_cache)
+        file_path = "{}/{}.pkl".format(path_cache, hash_params)
         with open(file_path, 'wb') as handle:
             pickle.dump(content, handle, protocol=pickle.HIGHEST_PROTOCOL)
 

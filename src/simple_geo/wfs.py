@@ -59,14 +59,15 @@ class wfs:
 
     def _get(self, uri):
         if self.debug:
-            print("GET",uri)
+            print("GET", uri)
         r = requests.get(uri)
         return r.content
 
     def _post(self, uri, data=None):
         if self.debug:
-            print("POST",uri)
-            headers = {'Content-Type':'application/x-www-form-urlencoded'}
+            print("POST", uri)
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
         r = requests.post(uri, data=data, headers=headers)
         return r.text
 
@@ -164,19 +165,12 @@ class wfs:
         feature_desc = self.describe_feature(ft_name)
         geometry_name = feature_desc['geometry']['name']
 
-        # data = {
-        #     'service':'wfs',
-        #     'version': '1.1.0',
-        #     'outputFormat':'application/json'
-        # }
         data = {
             'typeName': ft_name
         }
 
-        max_features = ""
         if 'max_features' in kwargs:
-            max_features = "&maxFeatures={}".format(kwargs['max_features'])
-            data['max_features'] = kwargs['max_features']
+            data['maxFeatures'] = kwargs['max_features']
 
         attributes = ""
         if 'attributes' in kwargs:
@@ -184,49 +178,36 @@ class wfs:
                 kwargs['attributes'] = ",".join(kwargs['attributes'])
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('attributes must be a list, tuple or string')
-            attributes = "&propertyName={},{}".format(geometry_name, kwargs['attributes'])
             data['propertyName'] = "{},{}".format(geometry_name, kwargs['attributes'])
 
-        sort_by = ""
         if 'sort_by' in kwargs:
             if type(kwargs['sort_by']) in [list, tuple]:
                 kwargs['sort_by'] = ",".join(kwargs['sort_by'])
             elif not type(kwargs['sort_by']) is str:
                 raise AttributeError('sort_by must be a list, tuple or string')
-            sort_by = "&sortBy={}".format(kwargs['sort_by'])
             data['sortBy'] = kwargs['sort_by']
 
-        cql_filter = ""
         if 'within' in kwargs:
             if not type(kwargs['within']) is str:
                 raise AttributeError('within must be a string')
-            cql_filter = "&CQL_FILTER=WITHIN({},{})".format(geometry_name, quote(kwargs['within']))
-            data['CQL_FILTER'] = "WITHIN({},{})".format(geometry_name, (kwargs['within']))
+            data['CQL_FILTER'] = "WITHIN({},{})".format(geometry_name, quote(kwargs['within']))
 
         if 'filter' in kwargs:
             if type(kwargs['filter']) in [list, tuple]:
                 kwargs['filter'] = "+AND+".join(kwargs['filter'])
             elif not type(kwargs['filter']) is str:
                 raise AttributeError('filter must be a list, tuple or string')
-            if not cql_filter:
-                cql_filter = "&CQL_FILTER="
+            if 'CQL_FILTER' not in data:
+                data['CQL_FILTER'] = ""
             else:
-                cql_filter += "+AND+"
-                data['CQL_FILTER'] += "&quot;and&quot;"
-            cql_filter += kwargs['filter']
+                data['CQL_FILTER'] += "+AND+"
             data['CQL_FILTER'] += kwargs['filter']
 
-        # doc = self._get(
-        #     "{}/{}&request=GetFeature&typeName={}{}{}{}{}".format(self.host, self.base_path, ft_name, max_features,
-        #                                                           attributes, cql_filter, sort_by))
-
-        a = ""
+        body = ""
         for key, value in data.iteritems():
-            a += "&{}={}".format(key, value)
-        print(a)
-        doc = self._post("{}/{}&request=GetFeature".format(self.host, self.base_path), data=data)
+            body += "&{}={}".format(key, value)
+        doc = self._post("{}/{}&request=GetFeature".format(self.host, self.base_path), data=body[1:])
 
-        # print(doc_post)
         if 'exception' in doc:
             raise Exception(doc["exception"])
 
