@@ -20,14 +20,5 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-from setuptools import setup
-
-setup(name='SimpleGeo',
-      version='0.2.0',
-      description='Simple Geo Toolkit',
-      url='https://github.com/e-sensing/simple_geo.py',
-      author='e-sensing team',
-      author_email='esensing-team@dpi.inpe.br',
-      license='LGPL3',
-      packages=['SimpleGeo'],
-      zip_safe=False)
+"""simple_geo.py toolkit"""
+from .SimpleGeo import SimpleGeo
