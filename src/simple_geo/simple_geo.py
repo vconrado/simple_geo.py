@@ -36,8 +36,6 @@ except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import quote
 
-cache = None
-
 
 class simple_geo:
     """This class implements a facade for the BDQ WFS and WTSS APIs .

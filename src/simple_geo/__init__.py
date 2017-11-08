@@ -22,3 +22,4 @@
 
 """simple_geo.py toolkit"""
 from .simple_geo import simple_geo
+from .simple_geo import SimpleGeo

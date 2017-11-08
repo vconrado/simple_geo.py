@@ -8,3 +8,4 @@ src/dist/
 .idea/
 .ipynb_checkpoints
 .sgeo/cache
+.sgeo
