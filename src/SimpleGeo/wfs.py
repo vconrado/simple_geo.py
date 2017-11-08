@@ -67,7 +67,6 @@ class wfs:
         if self.debug:
             print("POST", uri)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        print(data)
         r = requests.post(uri, data=data, headers=headers)
         return r.text
 

@@ -21,10 +21,17 @@
 #
 
 from Feature import Feature
+from Coverage import Coverage
+from TimeSerie import TimeSerie
 from wtss import wtss
 from wfs import wfs
 import pandas as pd
 from geopandas import GeoDataFrame
+import shapely
+import pickle
+import os
+import hashlib
+import json
 
 try:
     # For Python 3.0 and later
@@ -32,6 +39,12 @@ try:
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import quote
+
+# encoding=utf8
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 class SimpleGeo:
@@ -82,20 +95,48 @@ class SimpleGeo:
     def feature(self, name):
         return Feature(self, name)
 
-    def get(self, resource):
+    def features(self):
+        return self.__wfs.list_features()
+
+    def describe_feature(self, name):
+        return self.__wfs.describe_feature(name)
+
+    def coverage(self, name):
+        return Coverage(self, name)
+
+    def coverages(self):
+        return self.__wtss.list_coverages()
+
+    def describe_coverage(self, name):
+        return self.__wtss.describe_coverage(name)
+
+    def time_serie(self, coverage):
+        return TimeSerie(self, coverage)
+
+    def get(self, resource, **kwargs):
         if resource.__class__.__name__ is "Feature":
-            return self.__get_feature(resource)
+            return self.__get_feature(resource, **kwargs)
+        elif resource.__class__.__name__ is "Coverage":
+            return self.__get_coverage(resource, **kwargs)
+        elif resource.__class__.__name__ is "TimeSerie":
+            return self.__get_time_serie(resource, **kwargs)
         else:
             raise NotImplementedError("Not implemented")
 
-    def __get_feature(self, feature):
+    def __get_feature(self, feature, **kwargs):
 
-        kargs = {"max_features": feature._max_features,
-                 "attributes": feature._attributes,
-                 "filter": feature._filter,
-                 "sort_by": feature._sort_by}
+        args = {"max_features": feature._max_features,
+                "attributes": feature._attributes,
+                "filter": feature._filter,
+                "sort_by": feature._sort_by}
 
-        fc = self.__wfs.feature_collection(feature._name, **kargs)
+        fc = None
+        if self.__cache:
+            fc = self._get_cache(self.__wfs_server, "feature_collection", feature._name, args)
+        if fc is None:
+            fc = self.__wfs.feature_collection(feature._name, **args)
+            if self.__cache:
+                self._set_cache(self.__wfs_server, "feature_collection", feature._name, args, fc)
 
         if len(fc['features']) == 0:
             geo_data = pd.DataFrame()
@@ -105,6 +146,80 @@ class SimpleGeo:
             geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs'])
             geo_data.total_features = fc['total_features']
         return geo_data
+
+    def __get_time_serie(self, time_serie, **kwargs):
+
+        # cv = self.__wtss.time_series(time_serie._coverage._name, time_serie._coverage._attributes, latitude,
+        #                             longitude, time_serie._start_date, time_serie._end_date)
+
+        coverage = time_serie._coverage._name
+        attributes = time_serie._coverage._attributes
+        latitude = kwargs['pos'].y
+        longitude = kwargs['pos'].x
+        start_date = time_serie._start_date
+        end_date = time_serie._end_date
+
+        if self.__wtss is None:
+            raise AttributeError('wtss server is not defined')
+
+        cv = None
+        if self.__cache:
+            args = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
+                    'end_date': end_date}
+            cv = self._get_cache(self.__wtss_server, "time_serie", coverage, args)
+        if cv is None:
+            cv = self.__wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
+            if self.__cache:
+                self._set_cache(self.__wtss_server, "time_serie", coverage, args, cv)
+
+        data = pd.DataFrame(cv.attributes, index=cv.timeline)
+        data.total = len(cv.timeline)
+        return data
+
+    def __get_coverage(self, coverage, **kwargs):
+        raise NotImplementedError("Not implemented")
+
+    def _get_cache(self, server, resource_type, resource_name, kwargs):
+        """ Try to get cached request"""
+        hash_params = SimpleGeo._get_cache_hash(server, resource_type, resource_name, kwargs)
+        file_path = "{}/{}/{}.pkl".format(self.__cache_dir, resource_type, hash_params)
+        if os.path.isfile(file_path):
+            if os.path.getsize(file_path) > 0:
+                with open(file_path, 'rb') as handle:
+                    if self.__debug:
+                        print("Cache found !")
+                    content = pickle.load(handle)
+                    return content
+        if self.__debug:
+            print("Cache not found !")
+        return None
+
+    def _set_cache(self, server, resource_type, resource_name, kwargs, content):
+        """ Store a response on cache"""
+        hash_params = SimpleGeo._get_cache_hash(server, resource_type, resource_name, kwargs)
+        path_cache = "{}/{}".format(self.__cache_dir, resource_type)
+        if not os.path.exists(path_cache):
+            os.makedirs(path_cache)
+        file_path = "{}/{}.pkl".format(path_cache, hash_params)
+        with open(file_path, 'wb') as handle:
+            pickle.dump(content, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    @staticmethod
+    def _get_cache_hash(server, resource_type, resource_name, kwargs):
+        """Creates an hash from request parameters"""
+        params = "{}.{}.{}.{}".format(server, resource_type, resource_name, json.dumps(kwargs))
+        return hashlib.sha256(params).hexdigest()
+
+    def clear_cache(self):
+        if self.__debug:
+            print("Cleaning cache!")
+        if os.path.exists(self.__cache_dir):
+            for root, dirs, files in os.walk(self.__cache_dir, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+
 
 class Operations:
     @staticmethod
@@ -143,7 +258,7 @@ class Operations:
 
     @staticmethod
     def NE(op1, op2):
-        return "{}!='{}'".format(op1, op2)
+        return "{}<>'{}'".format(op1, op2)
 
     @staticmethod
     def LT(op1, op2):
@@ -166,12 +281,22 @@ class Operations:
         return "{}>='{}'".format(op1, op2)
 
     @staticmethod
+    def _convert_to_wkt(obj):
+        if type(obj) is str:
+            return obj
+        elif type(obj) in (shapely.geometry.point.Point, shapely.geometry.multipolygon.MultiPolygon):
+            return obj.wkt
+        else:
+            raise AttributeError('This attribute must be an array, Point or MultiPolygon', obj)
+
+    @staticmethod
     def WITHIN(wkt):
-        return "WITHIN(#geom#, {})".format(wkt)
+        return "WITHIN(#geom#, {})".format(Operations._convert_to_wkt(wkt))
 
     @staticmethod
     def INTERSECTS(wkt):
-        return "INTERSECTS(#geom#, {})".format(wkt)
+        return "INTERSECTS(#geom#, {})".format(Operations._convert_to_wkt(wkt))
+
 
 
         # spatial_op_dict = {
