@@ -26,7 +26,6 @@ f = s.feature("esensing:focos_bra_2016") \
     )) \
     .max_features(10) \
     .sort_by("regiao")
-# print(f)
 print(f.describe())
 # dados = f.get()
 # print(dados)
@@ -52,13 +51,10 @@ f = s.feature("esensing:focos_bra_2016") \
     .max_features(20) \
     .sort_by(op.ASC("timestamp"))
 
-
-#print(f)
 print(f.describe())
 dados = f.get()
 print(dados)
-# print(dados.loc[0,'geometry'])
-# print("total_features", dados.total_features)
+print("total_features", dados.total_features)
 
 
 
@@ -69,6 +65,7 @@ c = s.coverage("rpth") \
 
 ts = s.time_serie(c) \
     .period("2016-01-01", "2016-12-31")
+
 ts_data = ts.get(Point(-54.0, -12.0))
 print(ts_data)
 print(ts_data.total)
