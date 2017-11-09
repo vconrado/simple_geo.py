@@ -67,7 +67,6 @@ class wfs:
         if self.debug:
             print("POST", uri)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
         r = requests.post(uri, data=data, headers=headers)
         return r.text
 
@@ -157,7 +156,7 @@ class wfs:
         if not ft_name:
             raise ValueError("Missing feature name.")
 
-        invalid_parameters = set(kwargs) - {"max_features", "attributes", "within", "filter", "sort_by"}
+        invalid_parameters = set(kwargs) - {"max_features", "attributes", "filter", "sort_by"}
 
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
@@ -178,7 +177,8 @@ class wfs:
                 kwargs['attributes'] = ",".join(kwargs['attributes'])
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('attributes must be a list, tuple or string')
-            data['propertyName'] = "{},{}".format(geometry_name, kwargs['attributes'])
+            if len(kwargs['attributes']) > 0:
+                data['propertyName'] = "{},{}".format(geometry_name, kwargs['attributes'])
 
         if 'sort_by' in kwargs:
             if type(kwargs['sort_by']) in [list, tuple]:
@@ -187,25 +187,15 @@ class wfs:
                 raise AttributeError('sort_by must be a list, tuple or string')
             data['sortBy'] = kwargs['sort_by']
 
-        if 'within' in kwargs:
-            if not type(kwargs['within']) is str:
-                raise AttributeError('within must be a string')
-            data['CQL_FILTER'] = "WITHIN({},{})".format(geometry_name, quote(kwargs['within']))
-
         if 'filter' in kwargs:
-            if type(kwargs['filter']) in [list, tuple]:
-                kwargs['filter'] = "+AND+".join(kwargs['filter'])
-            elif not type(kwargs['filter']) is str:
-                raise AttributeError('filter must be a list, tuple or string')
-            if 'CQL_FILTER' not in data:
-                data['CQL_FILTER'] = ""
-            else:
-                data['CQL_FILTER'] += "+AND+"
-            data['CQL_FILTER'] += kwargs['filter']
+            if type(kwargs['filter']) is not str:
+                raise AttributeError('filter must be a string')
+            data['CQL_FILTER'] = kwargs['filter'].replace("#geom#", geometry_name)
 
         body = ""
         for key, value in data.iteritems():
-            body += "&{}={}".format(key, value)
+            if value:
+                body += "&{}={}".format(key, value)
         doc = self._post("{}/{}&request=GetFeature".format(self.host, self.base_path), data=body[1:])
 
         if 'exception' in doc:

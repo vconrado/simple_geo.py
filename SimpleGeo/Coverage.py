@@ -19,6 +19,8 @@
 #  along with simple_geo.py toolkit. See LICENSE. If not, write to
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
+
+
 class Coverage:
     def __init__(self, simple_geo, name, **kwargs):
         """Create Coverage object.
@@ -50,3 +52,6 @@ class Coverage:
 
     def get(self):
         return self.__simple_geo.get(self)
+
+    def describe(self):
+        return self.__simple_geo.describe_coverage(self._name)

@@ -27,8 +27,7 @@ from wtss import wtss
 from wfs import wfs
 import pandas as pd
 from geopandas import GeoDataFrame
-import shapely
-import pickle
+import cPickle
 import os
 import hashlib
 import json
@@ -43,8 +42,10 @@ except ImportError:
 # encoding=utf8
 import sys
 
+stdout = sys.stdout
 reload(sys)
 sys.setdefaultencoding('utf8')
+sys.stdout = stdout
 
 
 class SimpleGeo:
@@ -188,7 +189,7 @@ class SimpleGeo:
                 with open(file_path, 'rb') as handle:
                     if self.__debug:
                         print("Cache found !")
-                    content = pickle.load(handle)
+                    content = cPickle.load(handle)
                     return content
         if self.__debug:
             print("Cache not found !")
@@ -202,7 +203,7 @@ class SimpleGeo:
             os.makedirs(path_cache)
         file_path = "{}/{}.pkl".format(path_cache, hash_params)
         with open(file_path, 'wb') as handle:
-            pickle.dump(content, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            cPickle.dump(content, handle, protocol=cPickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def _get_cache_hash(server, resource_type, resource_name, kwargs):
@@ -219,92 +220,3 @@ class SimpleGeo:
                     os.remove(os.path.join(root, name))
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
-
-
-class Operations:
-    @staticmethod
-    def AND(*arg):
-        if len(arg) < 2:
-            raise AttributeError('It is necessary at least 2 operators for AND operator')
-        str_and = ""
-        for a in arg:
-            if str_and != "":
-                str_and += "+AND+"
-            str_and += "({})".format(a)
-        return str_and
-
-    @staticmethod
-    def OR(*arg):
-        if len(arg) < 2:
-            raise AttributeError('It is necessary at least 2 operators for OR operator')
-        str_or = ""
-        for a in arg:
-            if str_or != "":
-                str_or += "+OR+"
-            str_or += "({})".format(a)
-        return str_or
-
-    @staticmethod
-    def ASC(op1):
-        return "({} A)".format(op1)
-
-    @staticmethod
-    def DESC(op1):
-        return "({} D)".format(op1)
-
-    @staticmethod
-    def EQ(op1, op2):
-        return "{}='{}'".format(op1, op2)
-
-    @staticmethod
-    def NE(op1, op2):
-        return "{}<>'{}'".format(op1, op2)
-
-    @staticmethod
-    def LT(op1, op2):
-        return "{}<'{}'".format(op1, op2)
-
-    @staticmethod
-    def GT(op1, op2):
-        return "{}>'{}'".format(op1, op2)
-
-    @staticmethod
-    def LE(op1, op2):
-        return "{}<='{}'".format(op1, op2)
-
-    @staticmethod
-    def GE(op1, op2):
-        return "{}>='{}'".format(op1, op2)
-
-    @staticmethod
-    def BT(op1, op2, op3):
-        return "{}>='{}'".format(op1, op2)
-
-    @staticmethod
-    def _convert_to_wkt(obj):
-        if type(obj) is str:
-            return obj
-        elif type(obj) in (shapely.geometry.point.Point, shapely.geometry.multipolygon.MultiPolygon):
-            return obj.wkt
-        else:
-            raise AttributeError('This attribute must be an array, Point or MultiPolygon', obj)
-
-    @staticmethod
-    def WITHIN(wkt):
-        return "WITHIN(#geom#, {})".format(Operations._convert_to_wkt(wkt))
-
-    @staticmethod
-    def INTERSECTS(wkt):
-        return "INTERSECTS(#geom#, {})".format(Operations._convert_to_wkt(wkt))
-
-
-
-        # spatial_op_dict = {
-        #             'within': 'Within',
-        #             'intersects': 'Intersects',
-        #             'overlaps': 'Overlaps',
-        #             'touches': 'Touches',
-        #             'contain': 'Contains',
-        #             'crosses': 'Crosses',
-        #             'disjoint': 'Disjoint'
-        #         }

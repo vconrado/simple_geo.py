@@ -19,6 +19,8 @@
 #  along with simple_geo.py toolkit. See LICENSE. If not, write to
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
+
+
 class TimeSerie:
     def __init__(self, simple_geo, coverage, **kwargs):
         """Create TimeSerie object.
@@ -43,5 +45,13 @@ class TimeSerie:
             raise AttributeError('period dates must be string (YYYY-MM-DD)')
         return self
 
+    def date(self, start_date):
+        return self.period(start_date, start_date)
+
     def get(self, pos):
+        if type(pos) in (list, tuple):
+            tss = []
+            for p in pos:
+                tss.append(self.__simple_geo.get(self, pos=p))
+            return tss
         return self.__simple_geo.get(self, pos=pos)

@@ -20,14 +20,21 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-from setuptools import setup
+from setuptools import setup, find_packages
+
+with open('README.md') as f:
+    readme = f.read()
+
+with open('LICENSE') as f:
+    license = f.read()
 
 setup(name='SimpleGeo',
       version='0.2.0',
       description='Simple Geo Toolkit',
-      url='https://github.com/e-sensing/simple_geo.py',
+      long_description=readme,
       author='e-sensing team',
       author_email='esensing-team@dpi.inpe.br',
-      license='LGPL3',
-      packages=['SimpleGeo'],
-      zip_safe=False)
+      url='https://github.com/e-sensing/simple_geo.py',
+      license=license,
+      packages=find_packages(exclude=('examples', 'docs'))
+      )
