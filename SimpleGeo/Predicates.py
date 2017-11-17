@@ -23,8 +23,6 @@ import shapely
 
 
 class Predicates:
-    def __init__(self):
-        _debug = False
 
     @staticmethod
     def AND(*arg):

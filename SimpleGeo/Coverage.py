@@ -39,19 +39,25 @@ class Coverage:
             raise AttributeError('invalid Feature name')
 
         self.__simple_geo = simple_geo
-        self._name = name
-        self._attributes = []
+        self.attr = {
+            'name': name,
+            'attributes': []
+        }
+
+    def __getitem__(self, key):
+        if key in self.attr:
+            return self.attr[key]
 
     def attributes(self, attr):
         if type(attr) is str:
             attr = [attr, ]
         elif type(attr) not in [tuple, list]:
             raise AttributeError('attributes must be a list, tuple or string')
-        self._attributes = attr
+        self.attr['attributes'] = attr
         return self
 
     def get(self):
         return self.__simple_geo.get(self)
 
     def describe(self):
-        return self.__simple_geo.describe_coverage(self._name)
+        return self.__simple_geo.describe_coverage(self.attr['name'])

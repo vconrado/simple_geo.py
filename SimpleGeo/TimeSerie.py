@@ -33,14 +33,20 @@ class TimeSerie:
         #     raise AttributeError('simple_geo must be a SimpleGeo object')
 
         self.__simple_geo = simple_geo
-        self._coverage = coverage
-        self._start_date = None
-        self._end_date = None
+        self.attr = {
+            'coverage': coverage,
+            "start_date": None,
+            'end_date': None
+        }
+
+    def __getitem__(self, key):
+        if key in self.attr:
+            return self.attr[key]
 
     def period(self, start_date, end_date):
         if type(start_date) is str and type(end_date) is str:
-            self._start_date = start_date
-            self._end_date = end_date
+            self.attr['start_date'] = start_date
+            self.attr['end_date'] = end_date
         else:
             raise AttributeError('period dates must be string (YYYY-MM-DD)')
         return self

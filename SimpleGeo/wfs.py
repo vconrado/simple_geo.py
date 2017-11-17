@@ -107,7 +107,7 @@ class wfs:
         Raises:
             ValueError: if feature parameter is missing.
             AttributeError: if found an unexpected parameter type
-            Exception: if the service returns a expcetion
+            Exception: if the service returns a exception
         """
 
         if not ft_name:
@@ -171,7 +171,6 @@ class wfs:
         if 'max_features' in kwargs:
             data['maxFeatures'] = kwargs['max_features']
 
-        attributes = ""
         if 'attributes' in kwargs:
             if type(kwargs['attributes']) in [list, tuple]:
                 kwargs['attributes'] = ",".join(kwargs['attributes'])

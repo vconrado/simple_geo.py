@@ -31,6 +31,7 @@ import cPickle
 import os
 import hashlib
 import json
+import datetime
 
 try:
     # For Python 3.0 and later
@@ -126,18 +127,39 @@ class SimpleGeo:
 
     def __get_feature(self, feature, **kwargs):
 
-        args = {"max_features": feature._max_features,
-                "attributes": feature._attributes,
-                "filter": feature._filter,
-                "sort_by": feature._sort_by}
+        attributes = []
+        ts_attributes = []
+        # checking attributes
+        for att in feature['attributes']:
+            if type(att) is str:
+                attributes.append(att)
+            elif type(att) is dict:
+                if 'time_serie' in att:
+                    if 'date' in att:
+                        att['start_date'] = att['date']
+                        att['end_date'] = att['date']
+                        del att['date']
+                    dif = {'time_serie', 'start_date', 'end_date', 'datetime'} - set(att)
+                    if dif:
+                        raise AttributeError('missing attributes ', dif, ' to integrate time_serie to feature')
+                    ts_attributes.append(att)
+                else:
+                    raise AttributeError('unidentified attribute type')
+            else:
+                raise AttributeError('invalid attribute type')
+
+        args = {"max_features": feature['max_features'],
+                "attributes": attributes,
+                "filter": feature['filter'],
+                "sort_by": feature['sort_by']}
 
         fc = None
         if self.__cache:
-            fc = self._get_cache(self.__wfs_server, "feature_collection", feature._name, args)
+            fc = self._get_cache(self.__wfs_server, "feature_collection", feature['name'], args)
         if fc is None:
-            fc = self.__wfs.feature_collection(feature._name, **args)
+            fc = self.__wfs.feature_collection(feature['name'], **args)
             if self.__cache:
-                self._set_cache(self.__wfs_server, "feature_collection", feature._name, args, fc)
+                self._set_cache(self.__wfs_server, "feature_collection", feature['name'], args, fc)
 
         if len(fc['features']) == 0:
             geo_data = pd.DataFrame()
@@ -146,27 +168,50 @@ class SimpleGeo:
             geo_data = pd.DataFrame(fc['features'])
             geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs'])
             geo_data.total_features = fc['total_features']
+
+            if len(ts_attributes) > 0:
+                for ts_att in ts_attributes:
+                    df = pd.DataFrame()
+                    for index, row in geo_data.iterrows():
+                        if type(ts_att['start_date']) is int:
+                            start_date = (
+                                datetime.datetime.strptime(row[ts_att['datetime']],
+                                                           '%Y-%m-%dT%H:%M:%SZ') + datetime.timedelta(
+                                    days=ts_att['start_date'])).strftime("%Y-%m-%d")
+                            end_date = (
+                                datetime.datetime.strptime(row[ts_att['datetime']],
+                                                           '%Y-%m-%dT%H:%M:%SZ') + datetime.timedelta(
+                                    days=ts_att['end_date'])).strftime("%Y-%m-%d")
+                        ts = ts_att['time_serie'].period(start_date, end_date)
+                        ts_data = ts.get(row['geometry'])
+                        df = pd.concat([df, ts_data])
+                        print(ts_data)
+                    print(df)
+
+                    for k in df.keys():
+                        geo_data[k] = df.loc[:, k].tolist()
+
         return geo_data
 
     def __get_time_serie(self, time_serie, **kwargs):
 
-        # cv = self.__wtss.time_series(time_serie._coverage._name, time_serie._coverage._attributes, latitude,
-        #                             longitude, time_serie._start_date, time_serie._end_date)
-
-        coverage = time_serie._coverage._name
-        attributes = time_serie._coverage._attributes
+        coverage = time_serie['coverage']['name']
+        attributes = time_serie['coverage']['attributes']
         latitude = kwargs['pos'].y
         longitude = kwargs['pos'].x
-        start_date = time_serie._start_date
-        end_date = time_serie._end_date
+        if time_serie['start_date'] is not None:
+            start_date = time_serie['start_date']
+            end_date = time_serie['end_date']
+        else:
+            raise AttributeError('it is necessary to set period/date of the time serie')
 
         if self.__wtss is None:
             raise AttributeError('wtss server is not defined')
 
         cv = None
+        args = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
+                'end_date': end_date}
         if self.__cache:
-            args = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
-                    'end_date': end_date}
             cv = self._get_cache(self.__wtss_server, "time_serie", coverage, args)
         if cv is None:
             cv = self.__wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
