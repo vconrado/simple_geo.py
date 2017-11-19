@@ -39,30 +39,36 @@ class Feature:
             raise AttributeError('invalid Feature name')
 
         self.__simple_geo = simple_geo
-        self._name = name
-        self._attributes = []
-        self._filter = ""
-        self._max_features = []
-        self._sort_by = []
+        self.attr = {
+            'name': name,
+            'attributes': [],
+            'filter': "",
+            'max_features': [],
+            'sort_by': []
+        }
+
+    def __getitem__(self, key):
+        if key in self.attr:
+            return self.attr[key]
 
     def attributes(self, attr):
         if type(attr) is str:
             attr = [attr, ]
         elif type(attr) not in [tuple, list]:
             raise AttributeError('attributes must be a list, tuple or string')
-        self._attributes = attr
+        self.attr['attributes'] = attr
         return self
 
     def filter(self, ftr):
         if type(ftr) is not str:
             raise AttributeError('attributes must a string')
-        self._filter = ftr
+        self.attr['filter'] = ftr
         return self
 
     def max_features(self, max_ft):
         if max_ft < 1:
             raise AttributeError('max_features must be greater than 0')
-        self._max_features = max_ft
+        self.attr['max_features'] = max_ft
         return self
 
     def sort_by(self, sb):
@@ -70,21 +76,21 @@ class Feature:
             sb = [sb, ]
         elif type(sb) not in [tuple, list]:
             raise AttributeError('attributes must be a list, tuple or string')
-        self._sort_by = sb
+        self.attr['sort_by'] = sb
         return self
 
     def get(self):
         return self.__simple_geo.get(self)
 
     def describe(self):
-        return self.__simple_geo.describe_feature(self._name)
+        return self.__simple_geo.describe_feature(self.attr['name'])
 
     def __str__(self):
         str_obj = "Feature[\n"
-        str_obj += "\tname: {}\n".format(self._name)
-        str_obj += "\tmax_feature: {}\n".format(self._max_features)
-        str_obj += "\tsort_by: {}\n".format(",".join(self._sort_by))
-        str_obj += "\tattributes: {}\n".format(",".join(self._attributes))
-        str_obj += "\tfilter: {}\n".format(self._filter)
+        str_obj += "\tname: {}\n".format(self.attr['name'])
+        str_obj += "\tmax_feature: {}\n".format(self.attr['max_features'])
+        str_obj += "\tsort_by: {}\n".format(",".join(self.attr['sort_by']))
+        str_obj += "\tattributes: {}\n".format(",".join(self.attr['attributes']))
+        str_obj += "\tfilter: {}\n".format(self.attr['filter'])
         str_obj += "]\n"
         return str_obj

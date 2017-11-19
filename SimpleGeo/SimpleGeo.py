@@ -27,11 +27,11 @@ from wtss import wtss
 from wfs import wfs
 import pandas as pd
 from geopandas import GeoDataFrame
-import shapely
-import pickle
+import cPickle
 import os
 import hashlib
 import json
+import datetime
 
 try:
     # For Python 3.0 and later
@@ -43,8 +43,10 @@ except ImportError:
 # encoding=utf8
 import sys
 
+stdout = sys.stdout
 reload(sys)
 sys.setdefaultencoding('utf8')
+sys.stdout = stdout
 
 
 class SimpleGeo:
@@ -125,18 +127,39 @@ class SimpleGeo:
 
     def __get_feature(self, feature, **kwargs):
 
-        args = {"max_features": feature._max_features,
-                "attributes": feature._attributes,
-                "filter": feature._filter,
-                "sort_by": feature._sort_by}
+        attributes = []
+        ts_attributes = []
+        # checking attributes
+        for att in feature['attributes']:
+            if type(att) is str:
+                attributes.append(att)
+            elif type(att) is dict:
+                if 'time_serie' in att:
+                    if 'date' in att:
+                        att['start_date'] = att['date']
+                        att['end_date'] = att['date']
+                        del att['date']
+                    dif = {'time_serie', 'start_date', 'end_date', 'datetime'} - set(att)
+                    if dif:
+                        raise AttributeError('missing attributes ', dif, ' to integrate time_serie to feature')
+                    ts_attributes.append(att)
+                else:
+                    raise AttributeError('unidentified attribute type')
+            else:
+                raise AttributeError('invalid attribute type')
+
+        args = {"max_features": feature['max_features'],
+                "attributes": attributes,
+                "filter": feature['filter'],
+                "sort_by": feature['sort_by']}
 
         fc = None
         if self.__cache:
-            fc = self._get_cache(self.__wfs_server, "feature_collection", feature._name, args)
+            fc = self._get_cache(self.__wfs_server, "feature_collection", feature['name'], args)
         if fc is None:
-            fc = self.__wfs.feature_collection(feature._name, **args)
+            fc = self.__wfs.feature_collection(feature['name'], **args)
             if self.__cache:
-                self._set_cache(self.__wfs_server, "feature_collection", feature._name, args, fc)
+                self._set_cache(self.__wfs_server, "feature_collection", feature['name'], args, fc)
 
         if len(fc['features']) == 0:
             geo_data = pd.DataFrame()
@@ -145,27 +168,50 @@ class SimpleGeo:
             geo_data = pd.DataFrame(fc['features'])
             geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs'])
             geo_data.total_features = fc['total_features']
+
+            if len(ts_attributes) > 0:
+                for ts_att in ts_attributes:
+                    df = pd.DataFrame()
+                    for index, row in geo_data.iterrows():
+                        if type(ts_att['start_date']) is int:
+                            start_date = (
+                                datetime.datetime.strptime(row[ts_att['datetime']],
+                                                           '%Y-%m-%dT%H:%M:%SZ') + datetime.timedelta(
+                                    days=ts_att['start_date'])).strftime("%Y-%m-%d")
+                            end_date = (
+                                datetime.datetime.strptime(row[ts_att['datetime']],
+                                                           '%Y-%m-%dT%H:%M:%SZ') + datetime.timedelta(
+                                    days=ts_att['end_date'])).strftime("%Y-%m-%d")
+                        ts = ts_att['time_serie'].period(start_date, end_date)
+                        ts_data = ts.get(row['geometry'])
+                        df = pd.concat([df, ts_data])
+                        # print(ts_data)
+                    # print(df)
+
+                    for k in df.keys():
+                        geo_data[k] = df.loc[:, k].tolist()
+
         return geo_data
 
     def __get_time_serie(self, time_serie, **kwargs):
 
-        # cv = self.__wtss.time_series(time_serie._coverage._name, time_serie._coverage._attributes, latitude,
-        #                             longitude, time_serie._start_date, time_serie._end_date)
-
-        coverage = time_serie._coverage._name
-        attributes = time_serie._coverage._attributes
+        coverage = time_serie['coverage']['name']
+        attributes = time_serie['coverage']['attributes']
         latitude = kwargs['pos'].y
         longitude = kwargs['pos'].x
-        start_date = time_serie._start_date
-        end_date = time_serie._end_date
+        if time_serie['start_date'] is not None:
+            start_date = time_serie['start_date']
+            end_date = time_serie['end_date']
+        else:
+            raise AttributeError('it is necessary to set period/date of the time serie')
 
         if self.__wtss is None:
             raise AttributeError('wtss server is not defined')
 
         cv = None
+        args = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
+                'end_date': end_date}
         if self.__cache:
-            args = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
-                    'end_date': end_date}
             cv = self._get_cache(self.__wtss_server, "time_serie", coverage, args)
         if cv is None:
             cv = self.__wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
@@ -188,7 +234,7 @@ class SimpleGeo:
                 with open(file_path, 'rb') as handle:
                     if self.__debug:
                         print("Cache found !")
-                    content = pickle.load(handle)
+                    content = cPickle.load(handle)
                     return content
         if self.__debug:
             print("Cache not found !")
@@ -202,7 +248,7 @@ class SimpleGeo:
             os.makedirs(path_cache)
         file_path = "{}/{}.pkl".format(path_cache, hash_params)
         with open(file_path, 'wb') as handle:
-            pickle.dump(content, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            cPickle.dump(content, handle, protocol=cPickle.HIGHEST_PROTOCOL)
 
     @staticmethod
     def _get_cache_hash(server, resource_type, resource_name, kwargs):
@@ -219,92 +265,3 @@ class SimpleGeo:
                     os.remove(os.path.join(root, name))
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
-
-
-class Operations:
-    @staticmethod
-    def AND(*arg):
-        if len(arg) < 2:
-            raise AttributeError('It is necessary at least 2 operators for AND operator')
-        str_and = ""
-        for a in arg:
-            if str_and != "":
-                str_and += "+AND+"
-            str_and += "({})".format(a)
-        return str_and
-
-    @staticmethod
-    def OR(*arg):
-        if len(arg) < 2:
-            raise AttributeError('It is necessary at least 2 operators for OR operator')
-        str_or = ""
-        for a in arg:
-            if str_or != "":
-                str_or += "+OR+"
-            str_or += "({})".format(a)
-        return str_or
-
-    @staticmethod
-    def ASC(op1):
-        return "({} A)".format(op1)
-
-    @staticmethod
-    def DESC(op1):
-        return "({} D)".format(op1)
-
-    @staticmethod
-    def EQ(op1, op2):
-        return "{}='{}'".format(op1, op2)
-
-    @staticmethod
-    def NE(op1, op2):
-        return "{}<>'{}'".format(op1, op2)
-
-    @staticmethod
-    def LT(op1, op2):
-        return "{}<'{}'".format(op1, op2)
-
-    @staticmethod
-    def GT(op1, op2):
-        return "{}>'{}'".format(op1, op2)
-
-    @staticmethod
-    def LE(op1, op2):
-        return "{}<='{}'".format(op1, op2)
-
-    @staticmethod
-    def GE(op1, op2):
-        return "{}>='{}'".format(op1, op2)
-
-    @staticmethod
-    def BT(op1, op2, op3):
-        return "{}>='{}'".format(op1, op2)
-
-    @staticmethod
-    def _convert_to_wkt(obj):
-        if type(obj) is str:
-            return obj
-        elif type(obj) in (shapely.geometry.point.Point, shapely.geometry.multipolygon.MultiPolygon):
-            return obj.wkt
-        else:
-            raise AttributeError('This attribute must be an array, Point or MultiPolygon', obj)
-
-    @staticmethod
-    def WITHIN(wkt):
-        return "WITHIN(#geom#, {})".format(Operations._convert_to_wkt(wkt))
-
-    @staticmethod
-    def INTERSECTS(wkt):
-        return "INTERSECTS(#geom#, {})".format(Operations._convert_to_wkt(wkt))
-
-
-
-        # spatial_op_dict = {
-        #             'within': 'Within',
-        #             'intersects': 'Intersects',
-        #             'overlaps': 'Overlaps',
-        #             'touches': 'Touches',
-        #             'contain': 'Contains',
-        #             'crosses': 'Crosses',
-        #             'disjoint': 'Disjoint'
-        #         }
