@@ -1,70 +1,99 @@
-# Python Client API for Web Services (WFS and WTSS) 
+
+# Python Client API for WFS and WTSS
 
 ## Building and installing simple_geo.py from source
-**1.** In the shell, type
+
+1. In the shell, type
+
 ```bash
+
+
   git clone https://github.com/vconrado/simple_geo.py.git
   cd simple_geo.py/src
   pip install .
 ```
 
-## Using simple_geo.py
+## Using SimpleGeo.py
 
-### Retrieving Features
+### Listing Features and Coverages
+
+In the following example, we import the SimpleGeo module and then create a SimpleGeo object to query and print the list of available features and coverages in the server.
+
+
+
 ```python
-from simple_geo import simple_geo as sgeo 
+from SimpleGeo import SimpleGeo
 
-# Connecting to servers
-b = sgeo(wfs="http://localhost:8080/geoserver-esensing/",
-        wtss="http://localhost:7654")
+# connect to wfs and wtss servers
+s = SimpleGeo(wfs="http://wfs_server:8080/geoserver-esensing", wtss="http://wtss_server:7654")
 
-# Retrieving the list of all available features in the service
-ft_list = b.list_features()
-print(cv_list)
+# print available features
+print(s.features())
 
-# Retrieving the metadata of a given feature
-ft_scheme = b.describe_feature("esensing:focos_bra_2016")
-print(cv_scheme)
-
-# Retrieving the collection for a given feature
-fc, fc_metadata = b.feature_collection("esensing:focos_bra_2016")
-
-# Retrieving a selected elements for a given feature
-fc, fc_metadata = b.feature_collection("esensing:focos_bra_2016",
-                                       attributes=("id", "municipio", "timestamp", "regiao"),
-                                       within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
-                                       filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
-                                               "timestamp<'2016-02-01'"],
-                                       sort_by=("regiao", "municipio"),
-                                       max_features=10)
-print(fc)
-
-# Retrieving collection length of selected elements for a given feature
-fc_len = b.feature_collection_len("esensing:focos_bra_2016",
-                                  within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
-                                  filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
-                                          "timestamp<'2016-02-01'"])
-print(fc_len)
+# print available coverages
+print(s.coverages())
 ```
 
-### Retrieving Coverages
+## Getting metadata
+
+In the following example, we use SimpleGeo to retrieve the details of a feature and a coverage. Then we format the response.
+
+
 ```python
-from simple_geo import simple_geo as sgeo
+import json
 
-# Connecting to servers
-b = sgeo(wfs="http://localhost:8080/geoserver-esensing/",
-        wtss="http://localhost:7654")
+# Feature estados_bra
+f = s.feature('esensing:estados_bra')
+print(f.describe())
 
-# Retrieving the list of all available coverages in the service
-cv_list = b.list_coverages()
-print(cv_list)
 
-# Retrieving the metadata of a given coverage
-cv_scheme = b.describe_coverage("climatologia")
-print(cv_scheme)
+# Coverage rpth
+c = s.coverage('rpth')
+print(c.describe())
+```
 
-# Retrieving the time series for a given location
-ts, ts_metadata = b.time_series("climatologia", ("precipitation", "temperature", "humidity"), -12, -54)
-print(ts)
-print(ts_metadata)
+## Retrieving features
+
+In the following example, we retrieve a feature from the WFS server. SimpleGeo returns a GeoPandasDataFrame with the features.
+
+
+```python
+f = s.feature('esensing:estados_bra')
+estados = f.get()
+# displaying 
+display(estados.head())
+```
+
+### Feature methods
+
+- **max_features**: limit the number of features returned
+- **sort_by**: sorts by the returning features using one (ou more) attributes
+- **attributes**: selects attributes to be retrieved
+- **filter**: filtering features by its spatial and non-spatial attributes
+
+
+In the following example, we retrieve a feature from the WFS server using all allowed options. You can combine then in many ways to select only the features you want.
+
+
+```python
+# import SimpleGeo Predicates
+from SimpleGeo import Predicates as pre
+
+f = s.feature("esensing:focos_bra_2016") \
+    .attributes(["id", "municipio", "timestamp", "regiao"]) \
+    .filter(pre.OR(
+    pre.AND(
+        pre.EQ("satelite_referencia", "true"),
+        pre.GE("timestamp", "2016-01-01"),
+        pre.LT("timestamp", "2016-02-01"),
+        pre.WITHIN(
+            "POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))"),
+    ), \
+    pre.NE("regiao", "SE") \
+    )) \
+    .max_features(10) \
+    .sort_by("regiao")
+    
+focos = f.get()
+display(focos.head())
 ```
