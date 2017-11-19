@@ -3,7 +3,7 @@
 from context import SimpleGeo, Predicates as pre
 from shapely.geometry import Point
 
-s = SimpleGeo(wfs="http://wfs_server:8080/geoserver-esensing", wtss="http://wtss_server:7654", debug=False, cache=False)
+s = SimpleGeo(wfs="http://www.terrama2.dpi.inpe.br", wtss="http://www.terrama2.dpi.inpe.br", debug=False, cache=False)
 
 print(s.features())
 f = s.feature("esensing:focos_bra_2016") \

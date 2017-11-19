@@ -185,8 +185,8 @@ class SimpleGeo:
                         ts = ts_att['time_serie'].period(start_date, end_date)
                         ts_data = ts.get(row['geometry'])
                         df = pd.concat([df, ts_data])
-                        print(ts_data)
-                    print(df)
+                        # print(ts_data)
+                    # print(df)
 
                     for k in df.keys():
                         geo_data[k] = df.loc[:, k].tolist()
