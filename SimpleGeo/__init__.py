@@ -1,23 +1,29 @@
+# -*- coding: utf-8 -*-
 #
 #   Copyright (C) 2017 National Institute For Space Research (INPE) - Brazil.
 #
-#  This file is part of Python Client API for BDQ Web Feature Service.
+#  This file is part of simple_geo.py toolkit.
 #
-#  API for BDQ Web Feature Service is free software: you can
+#  simple_geo.py toolkit is free software: you can
 #  redistribute it and/or modify it under the terms of the
 #  GNU Lesser General Public License as published by
 #  the Free Software Foundation, either version 3 of the License,
 #  or (at your option) any later version.
 #
-#  API for BDQ Web Feature Service for Python is distributed in the hope that
+#  simple_geo.py toolkit is distributed in the hope that
 #  it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 #  GNU Lesser General Public License for more details.
 #
 #  You should have received a copy of the GNU Lesser General Public License
-#  along with BDQ Web Feature Service for Python. See LICENSE. If not, write to
+#  along with simple_geo.py toolkit. See LICENSE. If not, write to
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-"""Python Client API for Web Feature Service (WFS)."""
-from .simple_geo import simple_geo
+"""simple_geo.py toolkit"""
+from .Coverage import Coverage
+from .Predicates import Predicates
+from .Feature import Feature
+from .SimpleGeo import SimpleGeo
+from .TimeSerie import TimeSerie
+from .wfs import wfs
