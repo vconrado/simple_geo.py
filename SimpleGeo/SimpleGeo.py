@@ -112,7 +112,7 @@ class SimpleGeo:
     def describe_coverage(self, name):
         return self.__wtss.describe_coverage(name)
 
-    def time_serie(self, coverage):
+    def time_series(self, coverage):
         return TimeSerie(self, coverage)
 
     def get(self, resource, **kwargs):
@@ -121,7 +121,7 @@ class SimpleGeo:
         elif resource.__class__.__name__ is "Coverage":
             return self.__get_coverage(resource, **kwargs)
         elif resource.__class__.__name__ is "TimeSerie":
-            return self.__get_time_serie(resource, **kwargs)
+            return self.__get_time_series(resource, **kwargs)
         else:
             raise NotImplementedError("Not implemented")
 
@@ -134,14 +134,14 @@ class SimpleGeo:
             if type(att) is str:
                 attributes.append(att)
             elif type(att) is dict:
-                if 'time_serie' in att:
+                if 'time_series' in att:
                     if 'date' in att:
                         att['start_date'] = att['date']
                         att['end_date'] = att['date']
                         del att['date']
-                    dif = {'time_serie', 'start_date', 'end_date', 'datetime'} - set(att)
+                    dif = {'time_series', 'start_date', 'end_date', 'datetime'} - set(att)
                     if dif:
-                        raise AttributeError('missing attributes ', dif, ' to integrate time_serie to feature')
+                        raise AttributeError('missing attributes ', dif, ' to integrate time_series to feature')
                     ts_attributes.append(att)
                 else:
                     raise AttributeError('unidentified attribute type')
@@ -182,7 +182,7 @@ class SimpleGeo:
                                 datetime.datetime.strptime(row[ts_att['datetime']],
                                                            '%Y-%m-%dT%H:%M:%SZ') + datetime.timedelta(
                                     days=ts_att['end_date'])).strftime("%Y-%m-%d")
-                        ts = ts_att['time_serie'].period(start_date, end_date)
+                        ts = ts_att['time_series'].period(start_date, end_date)
                         ts_data = ts.get(row['geometry'])
                         df = pd.concat([df, ts_data])
                         # print(ts_data)
@@ -193,15 +193,15 @@ class SimpleGeo:
 
         return geo_data
 
-    def __get_time_serie(self, time_serie, **kwargs):
+    def __get_time_series(self, time_series, **kwargs):
 
-        coverage = time_serie['coverage']['name']
-        attributes = time_serie['coverage']['attributes']
+        coverage = time_series['coverage']['name']
+        attributes = time_series['coverage']['attributes']
         latitude = kwargs['pos'].y
         longitude = kwargs['pos'].x
-        if time_serie['start_date'] is not None:
-            start_date = time_serie['start_date']
-            end_date = time_serie['end_date']
+        if time_series['start_date'] is not None:
+            start_date = time_series['start_date']
+            end_date = time_series['end_date']
         else:
             raise AttributeError('it is necessary to set period/date of the time serie')
 
@@ -212,11 +212,11 @@ class SimpleGeo:
         args = {'attributes': attributes, 'latitude': latitude, 'longitude': longitude, 'start_date': start_date,
                 'end_date': end_date}
         if self.__cache:
-            cv = self._get_cache(self.__wtss_server, "time_serie", coverage, args)
+            cv = self._get_cache(self.__wtss_server, "time_series", coverage, args)
         if cv is None:
             cv = self.__wtss.time_series(coverage, attributes, latitude, longitude, start_date, end_date)
             if self.__cache:
-                self._set_cache(self.__wtss_server, "time_serie", coverage, args, cv)
+                self._set_cache(self.__wtss_server, "time_series", coverage, args, cv)
 
         data = pd.DataFrame(cv.attributes, index=cv.timeline)
         data.total = len(cv.timeline)

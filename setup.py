@@ -29,7 +29,7 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(name='SimpleGeo',
-      version='0.2.0',
+      version='0.3.0',
       description='Simple Geo Toolkit',
       long_description=readme,
       author='e-sensing team',

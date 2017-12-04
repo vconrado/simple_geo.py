@@ -3,9 +3,14 @@
 from context import SimpleGeo, Predicates as pre
 from shapely.geometry import Point
 
-s = SimpleGeo(wfs="http://www.terrama2.dpi.inpe.br", wtss="http://www.terrama2.dpi.inpe.br", debug=False, cache=False)
+s = SimpleGeo(wfs="http://www.terrama2.dpi.inpe.br/e-sensing/geoserver", wtss="http://www.terrama2.dpi.inpe.br/e-sensing", debug=False, cache=False)
 
 print(s.features())
+
+f = s.feature('esensing:amostras_cerrado')
+print(f.get())
+
+
 f = s.feature("esensing:focos_bra_2016") \
     .attributes(["id", "municipio", "timestamp", "regiao"]) \
     .filter(pre.OR(
@@ -56,7 +61,7 @@ print(s.coverages())
 c = s.coverage("rpth") \
     .attributes(["precipitation", "risk", "temperature", "humidity"])
 
-ts = s.time_serie(c) \
+ts = s.time_series(c) \
     .period("2016-01-01", "2016-01-09")
 
 ts_data = ts.get(Point(-54.0, -12.0))
@@ -68,12 +73,12 @@ print(ts_data)
 # Integrating Features and TimeSeries
 c = s.coverage("rpth") \
     .attributes(["precipitation", "risk", "temperature", "humidity"])
-ts = s.time_serie(c)
+ts = s.time_series(c)
 
 f = s.feature("esensing:focos_bra_2016") \
     .attributes(
     ["id", "municipio", "timestamp", "regiao",
-     {'time_serie': ts, 'start_date': 0, 'end_date': 0, 'datetime': 'timestamp'}]) \
+     {'time_series': ts, 'start_date': 0, 'end_date': 0, 'datetime': 'timestamp'}]) \
     .sort_by("timestamp") \
     .max_features(5)
 
