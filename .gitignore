@@ -9,3 +9,4 @@ src/dist/
 .ipynb_checkpoints
 .sgeo/cache
 .sgeo
+examples/auth_data.py

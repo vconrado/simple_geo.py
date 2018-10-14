@@ -23,15 +23,18 @@
 from SimpleGeo import SimpleGeo
 from SimpleGeo import Predicates as pre
 
-from auth import *
+# Trying to import user and password data
+try:
+    from auth_data import *
+except ImportError:
+    # or setting auth data
+    auth = ("user", "password")
 
 s = SimpleGeo(wfs="http://eodb.dpi.inpe.br/geoserver/", wtss="http://www.terrama2.dpi.inpe.br/e-sensing",
               debug=False, cache=False, auth=auth)
 
 for feature in s.features()['features']:
     print(feature)
-
-for feature in s.features()['features']:
     f = s.feature(feature).max_features(20)
     print(f.describe())
     print(f.get())
@@ -42,6 +45,7 @@ f = s.feature("inpe_obt:prodes_amazonia")\
         pre.EQ("classe", "FLORESTA"),
         pre.EQ("classe", "DESFLORESTAMENTO")
     )) \
+    .attributes(["classe", "uf"]) \
     .sort_by("uf")
 
 print(f.get())
