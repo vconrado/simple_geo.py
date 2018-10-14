@@ -23,15 +23,25 @@
 from Feature import Feature
 from Coverage import Coverage
 from TimeSerie import TimeSerie
-from wtss import wtss
+from Predicates import Predicates
 from wfs import wfs
+from wtss import wtss
+
 import pandas as pd
 from geopandas import GeoDataFrame
-import cPickle
+
 import os
 import hashlib
 import json
 import datetime
+
+
+try:
+    # For Python < 3.0 and later
+    import cPickle
+except ImportError:
+    # For Python  3.0 and later
+    import _pickle as cPickle
 
 try:
     # For Python 3.0 and later
@@ -43,10 +53,10 @@ except ImportError:
 # encoding=utf8
 import sys
 
-stdout = sys.stdout
-reload(sys)
-sys.setdefaultencoding('utf8')
-sys.stdout = stdout
+#stdout = sys.stdout
+#reload(sys)
+#sys.setdefaultencoding('utf8')
+#sys.stdout = stdout
 
 
 class SimpleGeo:
@@ -58,7 +68,7 @@ class SimpleGeo:
             debug (boolean, optional): enable debug messages
         """
 
-        invalid_parameters = set(kwargs) - {"debug", "wfs", "wtss", "cache", "cache_dir"}
+        invalid_parameters = set(kwargs) - {"debug", "wfs", "wtss", "cache", "cache_dir", "auth"}
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
 
@@ -80,10 +90,19 @@ class SimpleGeo:
                 raise AttributeError('cache_dir must be a str')
             self.__cache_dir = kwargs['cache_dir']
 
+        self.__auth = None
+        if 'auth' in kwargs:
+            if kwargs['auth'] is not None:
+                if not type(kwargs['auth']) is tuple:
+                    raise AttributeError('auth must be a tuple ("user", "pass")')
+                if len(kwargs['auth']) != 2:
+                    raise AttributeError('auth must be a tuple with 2 values ("user", "pass")')
+                self.__auth = kwargs['auth']
+
         self.__wfs = None
         if type(kwargs['wfs'] is str):
             self.__wfs_server = kwargs['wfs']
-            self.__wfs = wfs(kwargs['wfs'], debug=self.__debug)
+            self.__wfs = wfs(kwargs['wfs'], debug=self.__debug, auth=self.__auth)
         else:
             raise AttributeError('wfs must be a string')
 
@@ -93,6 +112,8 @@ class SimpleGeo:
             self.__wtss = wtss(kwargs['wtss'])
         else:
             raise AttributeError('wtss must be a string')
+
+
 
     def feature(self, name):
         return Feature(self, name)
@@ -248,13 +269,14 @@ class SimpleGeo:
             os.makedirs(path_cache)
         file_path = "{}/{}.pkl".format(path_cache, hash_params)
         with open(file_path, 'wb') as handle:
-            cPickle.dump(content, handle, protocol=cPickle.HIGHEST_PROTOCOL)
+            #cPickle.dump(content, handle, protocol=cPickle.HIGHEST_PROTOCOL)
+            cPickle.dump(content, handle)
 
     @staticmethod
     def _get_cache_hash(server, resource_type, resource_name, kwargs):
         """Creates an hash from request parameters"""
         params = "{}.{}.{}.{}".format(server, resource_type, resource_name, json.dumps(kwargs))
-        return hashlib.sha256(params).hexdigest()
+        return hashlib.sha256(params.encode('utf-8')).hexdigest()
 
     def clear_cache(self):
         if self.__debug:

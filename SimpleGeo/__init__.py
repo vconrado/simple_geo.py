@@ -21,9 +21,9 @@
 #
 
 """simple_geo.py toolkit"""
-from .Coverage import Coverage
-from .Predicates import Predicates
-from .Feature import Feature
+#from .Coverage import Coverage
+#from .Predicates import Predicates
+#from .Feature import Feature
 from .SimpleGeo import SimpleGeo
-from .TimeSerie import TimeSerie
-from .wfs import wfs
+#from .TimeSerie import TimeSerie
+#from .wfs import wfs

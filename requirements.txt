@@ -1,9 +1,5 @@
-wtss
+cython
 pandas
 geopandas
-cPickle
-hashlib
-json
-requests
-xml
 shapely
+requests

@@ -19,82 +19,34 @@
 #  along with simple_geo.py toolkit. See LICENSE. If not, write to
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
+
 import sys
-import time
+sys.path.insert(0, '../SimpleGeo')
 
-# to use local version of simple_geo
-sys.path.insert(0, '../src/simple_geo')
+from SimpleGeo import SimpleGeo
+from Predicates import Predicates as pre
 
-from simple_geo import simple_geo as sgeo
+from auth import *
 
-start_time = time.time()
-######################################################################################################################
-# simple_geo Features
+s = SimpleGeo(wfs="http://eodb.dpi.inpe.br/geoserver/", wtss="http://www.terrama2.dpi.inpe.br/e-sensing",
+              debug=False, cache=False, auth=auth)
 
-s = sgeo(wfs="http://wfs_server:8080/geoserver-esensing", wtss="http://wtss_server:7654", debug=False,
-         cache=False)
-s.clear_cache()
+for feature in s.features()['features']:
+    print(feature)
 
-print("Features")
-# Retrieving the list of all available features in the service
-ft_list = s.list_features()
-print(ft_list)
+for feature in s.features()['features']:
+    f = s.feature(feature).max_features(20)
+    print(f.describe())
+    print(f.get())
 
-# Retrieving the metadata of a given feature
-ft_scheme = s.describe_feature("esensing:focos_bra_2016")
-print(ft_scheme)
+f = s.feature("inpe_obt:prodes_amazonia")\
+    .max_features(20) \
+    .filter(pre.OR(
+        pre.EQ("classe", "FLORESTA"),
+        pre.EQ("classe", "DESFLORESTAMENTO")
+    )) \
+    .sort_by("uf")
 
-# Retrieving the collection for a given feature
-# fc, fc_metadata = b.feature_collection("esensing:focos_bra_2016")
+print(f.get())
 
-
-fc, fc_metadata = s.feature_collection("esensing:estados_bra",
-                                       filter=["nome='Rio Grande do Sul'"],
-                                       max_features=1)
-
-print(fc)
-
-# Retrieving a selected elements for a given feature
-fc, fc_metadata = s.feature_collection("esensing:focos_bra_2016",
-                                       attributes=("id", "municipio", "timestamp", "regiao", "estado"),
-                                       within=fc.loc[0, 'geometry'].wkt,
-                                       filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
-                                               "timestamp<'2016-02-01'"],
-                                       # filter=["satelite_referencia=true"],
-                                       sort_by=("regiao", "municipio"),
-                                       max_features=10)
-print(fc)
-print(fc_metadata)
-
-fc, fc_metadata = s.feature_collection("esensing:municipios_bra",
-                                       filter=["nome='Ilhabela'"],
-                                       max_features=1)
-print(fc)
-print(fc_metadata)
-
-# Retrieving collection length of selected elements for a given feature
-fc_len = s.feature_collection_len("esensing:focos_bra_2016",
-                                  within="POLYGON((-49.515628859948507 -19.394602563415745,-48.020567850467053 -19.610579617637825,-48.354439522883652 -21.052347219666608,-49.849500507163917 -20.836369963642884,-49.515628859948507 -19.394602563415745))",
-                                  filter=["satelite_referencia='true'", "timestamp>='2016-01-01'",
-                                          "timestamp<'2016-02-01'"])
-print("len", fc_len)
-
-######################################################################################################################
-# BDQ Coverages
-
-print("\n\nCoverages")
-
-# Retrieving the list of all available coverages in the service
-cv_list = s.list_coverages()
-print(cv_list)
-
-# Retrieving the metadata of a given coverage
-cv_scheme = s.describe_coverage("climatologia")
-print(cv_scheme)
-
-# Retrieving the time series for a given location
-ts, ts_metadata = s.time_series("climatologia", ("precipitation", "temperature", "humidity"), -12, -54)
-print(ts)
-print(ts_metadata)
-
-print("--- %s seconds ---" % (time.time() - start_time))
+print("Done !!!")

@@ -27,7 +27,7 @@ with open('README.md') as f:
 
 with open('LICENSE') as f:
     license = f.read()
-
+   
 setup(name='SimpleGeo',
       version='0.3.0',
       description='Simple Geo Toolkit',
@@ -37,4 +37,4 @@ setup(name='SimpleGeo',
       url='https://github.com/e-sensing/simple_geo.py',
       license=license,
       packages=find_packages(exclude=('examples', 'docs'))
-      )
+)

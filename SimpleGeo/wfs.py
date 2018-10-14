@@ -23,7 +23,11 @@
 import json
 from xml.dom import minidom
 import requests
+from requests.auth import HTTPBasicAuth
 from shapely.geometry import Point, Polygon, MultiPolygon
+from http.client import responses
+
+
 
 try:
     # For Python 3.0 and later
@@ -47,27 +51,52 @@ class wfs:
         """
         self.host = host
         self.base_path = "wfs?service=wfs&version=1.0.0&outputFormat=application/json"
-        self.debug = False
+        self.__debug = False
 
-        invalid_parameters = set(kwargs) - {"debug"}
+        invalid_parameters = set(kwargs) - {"debug", "auth"}
         if invalid_parameters:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
+
         if 'debug' in kwargs:
             if not type(kwargs['debug']) is bool:
                 raise AttributeError('debug must be a boolean')
-            self.debug = kwargs['debug']
+            self.__debug = kwargs['debug']
+
+        self.__auth = None
+
+        if 'auth' in kwargs:
+            if kwargs['auth'] is not None:
+                if not type(kwargs['auth']) is tuple:
+                    raise AttributeError('auth must be a tuple ("user", "pass")')
+                if len(kwargs['auth']) != 2:
+                    raise AttributeError('auth must be a tuple with 2 values ("user", "pass")')
+                self.__auth = kwargs['auth']
 
     def _get(self, uri):
-        if self.debug:
+        if self.__debug:
             print("GET", uri)
-        r = requests.get(uri)
+        r = requests.get(uri, auth=self.__auth)
+
+        if self.__debug:
+            print(r.status_code)
+
+        if r.status_code != 200:
+            raise Exception("HTTP GET request failed: {}".format(responses[r.status_code]))
+
         return r.content
 
     def _post(self, uri, data=None):
-        if self.debug:
+        if self.__debug:
             print("POST", uri)
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        r = requests.post(uri, data=data, headers=headers)
+        r = requests.post(uri, data=data, headers=headers, auth=self.__auth)
+
+        if self.__debug:
+            print(r.status_code)
+
+        if r.status_code != 200:
+            raise Exception("HTTP POST request failed: {}".format(responses[r.status_code]))
+
         return r.text
 
     def list_features(self):
@@ -80,9 +109,18 @@ class wfs:
             ValueError: if feature name parameter is missing
             Exception: if the service returns a exception
         """
-        doc = self._get("{}/{}&request=GetCapabilities".format(self.host, self.base_path))
-        if 'exception' in doc:
-            raise Exception(doc["exception"])
+        url = "{}/{}&request=GetCapabilities".format(self.host, self.base_path)
+        if self.__debug:
+            print(url)
+
+        doc = self._get(url)
+
+        if self.__debug:
+            print(doc)
+
+        # TODO verificar se veio erro
+        #if 'exception' in doc:
+        #    raise Exception(doc["exception"])
 
         xmldoc = minidom.parseString(doc)
         itemlist = xmldoc.getElementsByTagName('FeatureType')
@@ -114,8 +152,13 @@ class wfs:
             raise ValueError("Missing feature name.")
 
         doc = self._get("{}/{}&request=DescribeFeatureType&typeName={}".format(self.host, self.base_path, ft_name))
-        if 'exception' in doc:
-            raise Exception(doc["exception"])
+
+        if self.__debug:
+            print(doc)
+
+        # TODO verificar se veio erro
+        #if 'exception' in doc:
+        #    raise Exception(doc["exception"])
 
         js = json.loads(doc)
 
@@ -125,12 +168,14 @@ class wfs:
         feature['full_name'] = "{}:{}".format(feature['namespace'], feature['name'])
 
         feature['attributes'] = []
+        supported_geometries = ['gml:MultiPolygon', 'gml:Point', 'gml:Polygon']
         for prop in js['featureTypes'][0]['properties']:
             attr = {'name': prop['name'], 'localtype': prop['localType'], 'type': prop['type']}
             feature['attributes'].append(attr)
-            if prop['type'] in ['gml:MultiPolygon', 'gml:Point']:
+            if prop['type'] in supported_geometries :
                 feature['geometry'] = attr
-
+        if 'geometry' not in feature:
+            raise Exception("Unsupported geometry type. Supported geometries: ", supported_geometries )
         return feature
 
     def feature_collection(self, ft_name, **kwargs):
@@ -192,7 +237,7 @@ class wfs:
             data['CQL_FILTER'] = kwargs['filter'].replace("#geom#", geometry_name)
 
         body = ""
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if value:
                 body += "&{}={}".format(key, value)
         doc = self._post("{}/{}&request=GetFeature".format(self.host, self.base_path), data=body[1:])
@@ -214,6 +259,8 @@ class wfs:
                 for polygon in item['geometry']['coordinates']:
                     polygons += [Polygon(lr) for lr in polygon]
                 feature = {'geometry': MultiPolygon(polygons)}
+            elif feature_desc['geometry']['type'] == 'gml:Polygon':
+                feature = {'geometry': Polygon(item['geometry']['coordinates'][0])}
             else:
                 raise Exception('Unsupported geometry type.')
             feature.update(item['properties'])
