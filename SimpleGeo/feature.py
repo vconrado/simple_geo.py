@@ -20,7 +20,6 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-
 class Feature:
     def __init__(self, simple_geo, name, **kwargs):
         """Create Feature object.

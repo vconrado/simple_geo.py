@@ -20,11 +20,10 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-from Feature import Feature
-from Coverage import Coverage
-from TimeSerie import TimeSerie
-from Predicates import Predicates
-from wfs import wfs
+from SimpleGeo import Feature
+from SimpleGeo import Coverage
+#from SimpleGeo import TimeSerie
+from SimpleGeo import WFS
 from wtss import wtss
 
 import pandas as pd
@@ -34,7 +33,6 @@ import os
 import hashlib
 import json
 import datetime
-
 
 try:
     # For Python < 3.0 and later
@@ -49,14 +47,6 @@ try:
 except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import quote
-
-# encoding=utf8
-import sys
-
-#stdout = sys.stdout
-#reload(sys)
-#sys.setdefaultencoding('utf8')
-#sys.stdout = stdout
 
 
 class SimpleGeo:
@@ -102,7 +92,7 @@ class SimpleGeo:
         self.__wfs = None
         if type(kwargs['wfs'] is str):
             self.__wfs_server = kwargs['wfs']
-            self.__wfs = wfs(kwargs['wfs'], debug=self.__debug, auth=self.__auth)
+            self.__wfs = WFS(kwargs['wfs'], debug=self.__debug, auth=self.__auth)
         else:
             raise AttributeError('wfs must be a string')
 
@@ -112,8 +102,6 @@ class SimpleGeo:
             self.__wtss = wtss(kwargs['wtss'])
         else:
             raise AttributeError('wtss must be a string')
-
-
 
     def feature(self, name):
         return Feature(self, name)
@@ -269,7 +257,6 @@ class SimpleGeo:
             os.makedirs(path_cache)
         file_path = "{}/{}.pkl".format(path_cache, hash_params)
         with open(file_path, 'wb') as handle:
-            #cPickle.dump(content, handle, protocol=cPickle.HIGHEST_PROTOCOL)
             cPickle.dump(content, handle)
 
     @staticmethod

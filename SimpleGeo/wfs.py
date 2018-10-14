@@ -23,11 +23,8 @@
 import json
 from xml.dom import minidom
 import requests
-from requests.auth import HTTPBasicAuth
 from shapely.geometry import Point, Polygon, MultiPolygon
 from http.client import responses
-
-
 
 try:
     # For Python 3.0 and later
@@ -37,7 +34,7 @@ except ImportError:
     from urllib2 import quote
 
 
-class wfs:
+class WFS:
     """This class implements the WFS client.
     Attributes:
         host (str): the WFS server URL.

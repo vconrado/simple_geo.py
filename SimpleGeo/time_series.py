@@ -21,7 +21,7 @@
 #
 
 
-class TimeSerie:
+class TimeSeries:
     def __init__(self, simple_geo, coverage, **kwargs):
         """Create TimeSerie object.
         Args:

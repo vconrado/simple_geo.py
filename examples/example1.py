@@ -20,11 +20,8 @@
 #  e-sensing team at <esensing-team@dpi.inpe.br>.
 #
 
-import sys
-sys.path.insert(0, '../SimpleGeo')
-
 from SimpleGeo import SimpleGeo
-from Predicates import Predicates as pre
+from SimpleGeo import Predicates as pre
 
 from auth import *
 

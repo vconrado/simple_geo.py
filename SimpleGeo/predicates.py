@@ -94,10 +94,12 @@ class Predicates:
 def convert_shapely_to_wkt(obj):
     if type(obj) is str:
         return obj
-    elif type(obj) in (shapely.geometry.point.Point, shapely.geometry.multipolygon.MultiPolygon):
+    elif type(obj) in (shapely.geometry.point.Point,
+                       shapely.geometry.multipolygon.MultiPolygon,
+                       shapely.geometry.polygon.Polygon):
         return obj.wkt
     else:
-        raise AttributeError('This attribute must be an array, Point or MultiPolygon', obj)
+        raise AttributeError('This attribute must be an array, Point, Polygon or MultiPolygon', obj)
 
         # spatial_op_dict = {
         #             'within': 'Within',
