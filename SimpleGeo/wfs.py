@@ -171,8 +171,10 @@ class WFS:
             feature['attributes'].append(attr)
             if prop['type'] in supported_geometries :
                 feature['geometry'] = attr
-        if 'geometry' not in feature:
-            raise Exception("Unsupported geometry type. Supported geometries: ", supported_geometries )
+        #if 'geometry' not in feature:
+        #    raise Exception("Unsupported geometry type. Supported geometries: ", feature, supported_geometries )
+        if self.__debug:
+            print("Feature without geometry.")
         return feature
 
     def feature_collection(self, ft_name, **kwargs):
@@ -204,7 +206,9 @@ class WFS:
             raise AttributeError('invalid parameter(s): {}'.format(invalid_parameters))
 
         feature_desc = self.describe_feature(ft_name)
-        geometry_name = feature_desc['geometry']['name']
+        geometry_name = None
+        if 'geometry' in feature_desc:
+            geometry_name = feature_desc['geometry']['name']
 
         data = {
             'typeName': ft_name
@@ -218,9 +222,11 @@ class WFS:
                 kwargs['attributes'] = ",".join(kwargs['attributes'])
             elif not type(kwargs['attributes']) is str:
                 raise AttributeError('attributes must be a list, tuple or string')
-            if len(kwargs['attributes']) > 0:
-                data['propertyName'] = "{},{}".format(geometry_name, kwargs['attributes'])
-
+            if geometry_name != None:
+                if len(kwargs['attributes']) > 0:
+                    data['propertyName'] = "{},{}".format(geometry_name, kwargs['attributes'])
+            else:
+                data['propertyName'] = kwargs['attributes']
         if 'sort_by' in kwargs:
             if type(kwargs['sort_by']) in [list, tuple]:
                 kwargs['sort_by'] = ",".join(kwargs['sort_by'])
@@ -231,7 +237,10 @@ class WFS:
         if 'filter' in kwargs:
             if type(kwargs['filter']) is not str:
                 raise AttributeError('filter must be a string')
-            data['CQL_FILTER'] = kwargs['filter'].replace("#geom#", geometry_name)
+            if geometry_name is not None:
+                data['CQL_FILTER'] = kwargs['filter'].replace("#geom#", geometry_name)
+            else:
+                data['CQL_FILTER'] = kwargs['filter']
 
         body = ""
         for key, value in data.items():
@@ -249,17 +258,20 @@ class WFS:
         fc['total'] = len(js['features'])
         fc['features'] = []
         for item in js['features']:
-            if feature_desc['geometry']['type'] == 'gml:Point':
-                feature = {'geometry': Point(item['geometry']['coordinates'][0], item['geometry']['coordinates'][1])}
-            elif feature_desc['geometry']['type'] == 'gml:MultiPolygon':
-                polygons = []
-                for polygon in item['geometry']['coordinates']:
-                    polygons += [Polygon(lr) for lr in polygon]
-                feature = {'geometry': MultiPolygon(polygons)}
-            elif feature_desc['geometry']['type'] == 'gml:Polygon':
-                feature = {'geometry': Polygon(item['geometry']['coordinates'][0])}
+            if geometry_name is not None:
+                if feature_desc['geometry']['type'] == 'gml:Point':
+                    feature = {'geometry': Point(item['geometry']['coordinates'][0], item['geometry']['coordinates'][1])}
+                elif feature_desc['geometry']['type'] == 'gml:MultiPolygon':
+                    polygons = []
+                    for polygon in item['geometry']['coordinates']:
+                        polygons += [Polygon(lr) for lr in polygon]
+                    feature = {'geometry': MultiPolygon(polygons)}
+                elif feature_desc['geometry']['type'] == 'gml:Polygon':
+                    feature = {'geometry': Polygon(item['geometry']['coordinates'][0])}
+                else:
+                    raise Exception('Unsupported geometry type.')
             else:
-                raise Exception('Unsupported geometry type.')
+                feature = {}
             feature.update(item['properties'])
             fc['features'].append(feature)
         fc['crs'] = js['crs']

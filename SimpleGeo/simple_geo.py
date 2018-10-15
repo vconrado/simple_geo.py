@@ -90,18 +90,20 @@ class SimpleGeo:
                 self.__auth = kwargs['auth']
 
         self.__wfs = None
-        if type(kwargs['wfs'] is str):
-            self.__wfs_server = kwargs['wfs']
-            self.__wfs = WFS(kwargs['wfs'], debug=self.__debug, auth=self.__auth)
-        else:
-            raise AttributeError('wfs must be a string')
+        if 'wfs' in kwargs:
+            if type(kwargs['wfs'] is str):
+                self.__wfs_server = kwargs['wfs']
+                self.__wfs = WFS(kwargs['wfs'], debug=self.__debug, auth=self.__auth)
+            else:
+                raise AttributeError('wfs must be a string')
 
         self.__wtss = None
-        if type(kwargs['wtss'] is str):
-            self.__wtss_server = kwargs['wtss']
-            self.__wtss = wtss(kwargs['wtss'])
-        else:
-            raise AttributeError('wtss must be a string')
+        if 'wtss' in kwargs:
+            if type(kwargs['wtss'] is str):
+                self.__wtss_server = kwargs['wtss']
+                self.__wtss = wtss(kwargs['wtss'])
+            else:
+                raise AttributeError('wtss must be a string')
 
     def feature(self, name):
         return Feature(self, name)
@@ -175,7 +177,8 @@ class SimpleGeo:
             geo_data.total_features = 0
         else:
             geo_data = pd.DataFrame(fc['features'])
-            geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs'])
+            if 'geometry' in fc:
+                geo_data = GeoDataFrame(geo_data, geometry='geometry', crs=fc['crs'])
             geo_data.total_features = fc['total_features']
 
             if len(ts_attributes) > 0:

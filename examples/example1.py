@@ -30,7 +30,7 @@ except ImportError:
     # or setting auth data
     auth = ("user", "password")
 
-s = SimpleGeo(wfs="http://eodb.dpi.inpe.br/geoserver/", wtss="http://www.terrama2.dpi.inpe.br/e-sensing",
+s = SimpleGeo(wfs="http://eodb.dpi.inpe.br/geoserver/",
               debug=False, cache=False, auth=auth)
 
 for feature in s.features()['features']:
@@ -42,8 +42,8 @@ for feature in s.features()['features']:
 f = s.feature("inpe_obt:prodes_amazonia")\
     .max_features(20) \
     .filter(pre.OR(
-        pre.EQ("classe", "FLORESTA"),
-        pre.EQ("classe", "DESFLORESTAMENTO")
+        pre.EQ("classe", "Floresta"),
+        pre.EQ("classe", "Pasto Sujo")
     )) \
     .attributes(["classe", "uf"]) \
     .sort_by("uf")
